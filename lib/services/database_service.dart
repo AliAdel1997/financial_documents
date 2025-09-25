@@ -11,10 +11,12 @@ class DatabaseService {
     if (_isInitialized) return;
 
     final dir = await getApplicationDocumentsDirectory();
-    isar = await Isar.open(
-      [DocumentSchema, PrintBatchSchema, PrintSettingsSchema, OrganizationSchema],
-      directory: dir.path,
-    );
+    isar = await Isar.open([
+      DocumentSchema,
+      PrintBatchSchema,
+      PrintSettingsSchema,
+      OrganizationSchema,
+    ], directory: dir.path);
 
     // إنشاء إعدادات افتراضية إذا لم تكن موجودة
     await _initializeDefaultSettings();
@@ -53,18 +55,19 @@ class DatabaseService {
     return await isar.documents.get(id);
   }
 
-  static Future<Document?> getDocumentByOutgoingNumber(int outgoingNumber) async {
+  static Future<Document?> getDocumentByOutgoingNumber(
+    int outgoingNumber,
+  ) async {
     return await isar.documents
         .filter()
         .outgoingNumberEqualTo(outgoingNumber)
         .findFirst();
   }
 
-  static Future<List<Document>> getDocumentsByStatus(DocumentStatus status) async {
-    return await isar.documents
-        .filter()
-        .statusEqualTo(status)
-        .findAll();
+  static Future<List<Document>> getDocumentsByStatus(
+    DocumentStatus status,
+  ) async {
+    return await isar.documents.filter().statusEqualTo(status).findAll();
   }
 
   static Future<void> saveDocument(Document document) async {
@@ -97,7 +100,7 @@ class DatabaseService {
   }
 
   static Future<void> updateDocumentStatus(
-    int id, 
+    int id,
     DocumentStatus status, {
     String? bankNotificationNumber,
     DateTime? uploadedDate,
@@ -107,12 +110,12 @@ class DatabaseService {
       if (document != null) {
         document.status = status;
         document.updatedAt = DateTime.now();
-        
+
         if (status == DocumentStatus.uploaded) {
           document.bankNotificationNumber = bankNotificationNumber;
           document.uploadDate = uploadedDate ?? DateTime.now();
         }
-        
+
         await isar.documents.put(document);
       }
     });
@@ -134,8 +137,8 @@ class DatabaseService {
   }
 
   static Future<void> updatePrintBatchStatus(
-    int id, 
-    PrintBatchStatus status
+    int id,
+    PrintBatchStatus status,
   ) async {
     await isar.writeTxn(() async {
       final batch = await isar.printBatchs.get(id);
@@ -184,18 +187,20 @@ class DatabaseService {
   static Future<List<Document>> searchDocuments(String query) async {
     return await isar.documents
         .filter()
-        .group((q) => q
-            .documentDetailsContains(query, caseSensitive: false)
-            .or()
-            .amountInWordsContains(query, caseSensitive: false)
-            .or()
-            .recipientAddressContains(query, caseSensitive: false))
+        .group(
+          (q) => q
+              .documentDetailsContains(query, caseSensitive: false)
+              .or()
+              .amountInWordsContains(query, caseSensitive: false)
+              .or()
+              .recipientAddressContains(query, caseSensitive: false),
+        )
         .findAll();
   }
 
   static Future<List<Document>> getDocumentsByDateRange(
-    DateTime start, 
-    DateTime end
+    DateTime start,
+    DateTime end,
   ) async {
     return await isar.documents
         .filter()
@@ -206,15 +211,12 @@ class DatabaseService {
   // Statistics
   static Future<Map<DocumentStatus, int>> getDocumentStatusCounts() async {
     final counts = <DocumentStatus, int>{};
-    
+
     for (final status in DocumentStatus.values) {
-      final count = await isar.documents
-          .filter()
-          .statusEqualTo(status)
-          .count();
+      final count = await isar.documents.filter().statusEqualTo(status).count();
       counts[status] = count;
     }
-    
+
     return counts;
   }
 
@@ -265,10 +267,7 @@ class DatabaseService {
   }
 
   static Future<List<Document>> getDocumentsByBatch(String batchId) async {
-    return await isar.documents
-        .filter()
-        .batchIdEqualTo(batchId)
-        .findAll();
+    return await isar.documents.filter().batchIdEqualTo(batchId).findAll();
   }
 
   static Future<void> clearAllData() async {

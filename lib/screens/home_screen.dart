@@ -26,10 +26,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadData() async {
     if (!mounted) return;
-    
-    final documentsProvider = Provider.of<DocumentsProvider>(context, listen: false);
-    final organizationProvider = Provider.of<OrganizationProvider>(context, listen: false);
-    
+
+    final documentsProvider = Provider.of<DocumentsProvider>(
+      context,
+      listen: false,
+    );
+    final organizationProvider = Provider.of<OrganizationProvider>(
+      context,
+      listen: false,
+    );
+
     await Future.wait([
       documentsProvider.loadDocuments(),
       organizationProvider.loadOrganization(),
@@ -53,18 +59,13 @@ class _HomeScreenState extends State<HomeScreen> {
               _showSettingsDialog(context);
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _refreshData,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _refreshData),
         ],
       ),
       body: Consumer2<DocumentsProvider, OrganizationProvider>(
         builder: (context, documentsProvider, organizationProvider, child) {
           if (documentsProvider.isLoading || organizationProvider.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
 
           if (documentsProvider.error != null) {
@@ -78,19 +79,19 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 // بطاقة معلومات المؤسسة
                 _buildOrganizationCard(organizationProvider.organization),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // إحصائيات سريعة
                 _buildStatsCards(),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // الأزرار الرئيسية
                 _buildMainButtons(context, documentsProvider),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // قائمة المستندات الأخيرة
                 _buildRecentDocuments(documentsProvider.documents),
               ],
@@ -183,7 +184,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildStatCard(String title, String value, Color color, IconData icon) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    Color color,
+    IconData icon,
+  ) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -266,7 +272,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildRecentDocuments(List<Document> documents) {
     final recentDocs = documents.take(5).toList();
-    
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -392,9 +398,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showAddDocumentDialog(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const AddDocumentScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const AddDocumentScreen()),
     ).then((_) => _loadData());
   }
 
@@ -415,9 +419,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showAllDocuments(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const ReportsByRecipientScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const ReportsByRecipientScreen()),
     );
   }
 
@@ -433,9 +435,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _exportToExcel(DocumentsProvider provider) async {
     final filePath = await provider.exportToExcel();
     if (filePath != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تم تصدير الملف: $filePath')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('تم تصدير الملف: $filePath')));
     }
   }
 }

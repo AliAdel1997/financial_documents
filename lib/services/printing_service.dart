@@ -18,14 +18,21 @@ class PrintingService {
   static const double _headerFontSize = 16;
 
   /// طباعة مستند مفرد مع معاينة
-  static Future<void> printSingleDocument(Document document, BuildContext? context) async {
+  static Future<void> printSingleDocument(
+    Document document,
+    BuildContext? context,
+  ) async {
     try {
       // الحصول على معلومات المؤسسة
       final organization = await DatabaseService.getMainOrganization();
-      
+
       // إنشاء PDF للمعاينة
-      final previewPdf = await _createDocumentPDF(document, organization, false);
-      
+      final previewPdf = await _createDocumentPDF(
+        document,
+        organization,
+        false,
+      );
+
       // عرض المعاينة
       await Printing.layoutPdf(
         onLayout: (PdfPageFormat format) async => previewPdf,
@@ -35,10 +42,10 @@ class PrintingService {
       // السؤال عن المتابعة للطباعة النهائية
       // في التطبيق الحقيقي، ستكون هذه واجهة مستخدم
       print('هل تريد المتابعة للطباعة النهائية؟');
-      
+
       // إنشاء النسخة المشفرة مع QR Code
       final finalPdf = await _createDocumentPDF(document, organization, true);
-      
+
       // اختيار الطابعة والطباعة
       if (context != null) {
         final selectedPrinter = await Printing.pickPrinter(context: context);
@@ -64,7 +71,6 @@ class PrintingService {
       document.printedDate = DateTime.now();
       document.status = DocumentStatus.printed;
       await DatabaseService.saveDocument(document);
-      
     } catch (e) {
       throw Exception('خطأ في طباعة المستند: $e');
     }
@@ -84,10 +90,10 @@ class PrintingService {
 
       // الحصول على معلومات المؤسسة
       final organization = await DatabaseService.getMainOrganization();
-      
+
       // إنشاء معرف دفعة فريد
       final batchId = 'batch_${DateTime.now().millisecondsSinceEpoch}';
-      
+
       // تعيين أرقام الصادر إذا تم تحديد النطاق
       if (startingNumber != null && endingNumber != null) {
         await _assignOutgoingNumbers(documents, startingNumber, endingNumber);
@@ -112,7 +118,7 @@ class PrintingService {
 
       // إنشاء PDF للمعاينة (النسخة الأولى بدون تشفير)
       final previewPdf = await _createBatchPDF(documents, organization, false);
-      
+
       // عرض المعاينة
       await Printing.layoutPdf(
         onLayout: (PdfPageFormat format) async => previewPdf,
@@ -120,14 +126,14 @@ class PrintingService {
       );
 
       print('هل تريد المتابعة للطباعة النهائية؟');
-      
+
       // تحديث حالة الدفعة
       printBatch.status = PrintBatchStatus.printing;
       await DatabaseService.savePrintBatch(printBatch);
 
       // إنشاء النسخة المشفرة مع QR Codes
       final finalPdf = await _createBatchPDF(documents, organization, true);
-      
+
       // اختيار الطابعة والطباعة
       if (context != null) {
         final selectedPrinter = await Printing.pickPrinter(context: context);
@@ -163,7 +169,6 @@ class PrintingService {
 
       // تصدير بيانات الطباعة إلى Excel
       await _exportPrintReport(documents, organization, batchId);
-      
     } catch (e) {
       throw Exception('خطأ في طباعة عدة مستندات: $e');
     }
@@ -182,10 +187,12 @@ class PrintingService {
     if (includeQR) {
       qrData = await _generateQRData(document);
       document.qrCodeData = qrData;
-      
+
       // تشفير المحتوى إذا كان مطلوباً
       if (includeQR) {
-        document.encryptedContent = await EncryptionService.encryptDocument(document);
+        document.encryptedContent = await EncryptionService.encryptDocument(
+          document,
+        );
         document.isEncrypted = true;
       }
     }
@@ -199,23 +206,22 @@ class PrintingService {
             children: [
               // رأس المستند
               _buildDocumentHeader(organization),
-              
+
               pw.SizedBox(height: 20),
-              
+
               // معلومات المستند
               _buildDocumentInfo(document),
-              
+
               pw.SizedBox(height: 20),
-              
+
               // محتوى المستند
               _buildDocumentContent(document),
-              
+
               pw.Spacer(),
-              
+
               // QR Code إذا كان مطلوباً
-              if (includeQR && qrData != null)
-                _buildQRCode(qrData),
-                
+              if (includeQR && qrData != null) _buildQRCode(qrData),
+
               // توقيع وتاريخ
               _buildDocumentFooter(organization),
             ],
@@ -241,9 +247,11 @@ class PrintingService {
       if (includeQR) {
         qrData = await _generateQRData(document);
         document.qrCodeData = qrData;
-        
+
         // تشفير المحتوى
-        document.encryptedContent = await EncryptionService.encryptDocument(document);
+        document.encryptedContent = await EncryptionService.encryptDocument(
+          document,
+        );
         document.isEncrypted = true;
       }
 
@@ -256,23 +264,22 @@ class PrintingService {
               children: [
                 // رأس المستند
                 _buildDocumentHeader(organization),
-                
+
                 pw.SizedBox(height: 20),
-                
+
                 // معلومات المستند
                 _buildDocumentInfo(document),
-                
+
                 pw.SizedBox(height: 20),
-                
+
                 // محتوى المستند
                 _buildDocumentContent(document),
-                
+
                 pw.Spacer(),
-                
+
                 // QR Code إذا كان مطلوباً
-                if (includeQR && qrData != null)
-                  _buildQRCode(qrData),
-                  
+                if (includeQR && qrData != null) _buildQRCode(qrData),
+
                 // توقيع وتاريخ
                 _buildDocumentFooter(organization),
               ],
@@ -313,7 +320,7 @@ class PrintingService {
 
   /// بناء معلومات المستند
   static pw.Widget _buildDocumentInfo(Document document) {
-    final dateStr = document.documentDate != null 
+    final dateStr = document.documentDate != null
         ? '${document.documentDate!.day}/${document.documentDate!.month}/${document.documentDate!.year}'
         : '';
 
@@ -331,43 +338,50 @@ class PrintingService {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        if (document.recipientAddress != null && document.recipientAddress!.isNotEmpty)
+        if (document.recipientAddress != null &&
+            document.recipientAddress!.isNotEmpty)
           pw.Text(
             'إلى: ${document.recipientAddress}',
             style: pw.TextStyle(fontSize: _fontSize),
           ),
-          
+
         pw.SizedBox(height: 15),
-        
+
         pw.Text(
           'الموضوع: ${document.documentDetails ?? ''}',
-          style: pw.TextStyle(fontSize: _fontSize, fontWeight: pw.FontWeight.bold),
+          style: pw.TextStyle(
+            fontSize: _fontSize,
+            fontWeight: pw.FontWeight.bold,
+          ),
         ),
-        
+
         pw.SizedBox(height: 15),
-        
+
         if (document.amount != null && document.amount! > 0) ...[
           pw.Text(
             'المبلغ: ${document.amount} دينار',
             style: pw.TextStyle(fontSize: _fontSize),
           ),
-          
-          if (document.amountInWords != null && document.amountInWords!.isNotEmpty)
+
+          if (document.amountInWords != null &&
+              document.amountInWords!.isNotEmpty)
             pw.Text(
               'كتابة: ${document.amountInWords}',
               style: pw.TextStyle(fontSize: _fontSize),
             ),
-            
+
           pw.SizedBox(height: 10),
         ],
-        
-        if (document.departmentIban != null && document.departmentIban!.isNotEmpty)
+
+        if (document.departmentIban != null &&
+            document.departmentIban!.isNotEmpty)
           pw.Text(
             'ايبان الدائرة: ${document.departmentIban}',
             style: pw.TextStyle(fontSize: _fontSize),
           ),
-          
-        if (document.recipientIban != null && document.recipientIban!.isNotEmpty)
+
+        if (document.recipientIban != null &&
+            document.recipientIban!.isNotEmpty)
           pw.Text(
             'ايبان الجهة المراد التحويل إليها: ${document.recipientIban}',
             style: pw.TextStyle(fontSize: _fontSize),
@@ -382,7 +396,9 @@ class PrintingService {
       child: pw.Container(
         width: 100,
         height: 100,
-        child: pw.Text('QR Code: $qrData'), // مؤقتاً حتى نجد مكتبة QR مناسبة للـ PDF
+        child: pw.Text(
+          'QR Code: $qrData',
+        ), // مؤقتاً حتى نجد مكتبة QR مناسبة للـ PDF
       ),
     );
   }
@@ -426,7 +442,7 @@ class PrintingService {
       'amount': document.amount,
       'timestamp': DateTime.now().millisecondsSinceEpoch,
     };
-    
+
     return qrData.toString();
   }
 
@@ -461,7 +477,7 @@ class PrintingService {
         fileName: 'print_report_$batchId.xlsx',
         organization: organization,
       );
-      
+
       print('تم تصدير تقرير الطباعة إلى: $filePath');
     } catch (e) {
       print('خطأ في تصدير تقرير الطباعة: $e');
@@ -530,29 +546,31 @@ class PrintingService {
               ),
               textAlign: pw.TextAlign.center,
             ),
-            
+
             pw.SizedBox(height: 20),
-            
+
             // معلومات التقرير
             if (startDate != null || endDate != null) ...[
               pw.Text('فترة التقرير:'),
               if (startDate != null)
-                pw.Text('من: ${startDate.day}/${startDate.month}/${startDate.year}'),
+                pw.Text(
+                  'من: ${startDate.day}/${startDate.month}/${startDate.year}',
+                ),
               if (endDate != null)
                 pw.Text('إلى: ${endDate.day}/${endDate.month}/${endDate.year}'),
               pw.SizedBox(height: 10),
             ],
-            
+
             if (statusFilter != null)
               pw.Text('الحالة: ${_getStatusText(statusFilter)}'),
-              
+
             pw.SizedBox(height: 20),
-            
+
             // جدول المستندات
             _buildDocumentTable(documents),
-            
+
             pw.SizedBox(height: 20),
-            
+
             // إحصائيات
             _buildReportStatistics(documents),
           ];
@@ -567,14 +585,18 @@ class PrintingService {
   static pw.Widget _buildDocumentTable(List<Document> documents) {
     return pw.Table.fromTextArray(
       headers: ['رقم الصادر', 'التاريخ', 'المبلغ', 'الحالة'],
-      data: documents.map((doc) => [
-        doc.outgoingNumber?.toString() ?? '',
-        doc.documentDate != null 
-            ? '${doc.documentDate!.day}/${doc.documentDate!.month}/${doc.documentDate!.year}'
-            : '',
-        doc.amount?.toString() ?? '',
-        _getStatusText(doc.status),
-      ]).toList(),
+      data: documents
+          .map(
+            (doc) => [
+              doc.outgoingNumber?.toString() ?? '',
+              doc.documentDate != null
+                  ? '${doc.documentDate!.day}/${doc.documentDate!.month}/${doc.documentDate!.year}'
+                  : '',
+              doc.amount?.toString() ?? '',
+              _getStatusText(doc.status),
+            ],
+          )
+          .toList(),
       headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
       cellStyle: const pw.TextStyle(fontSize: 10),
     );
@@ -585,10 +607,12 @@ class PrintingService {
     final totalAmount = documents
         .where((doc) => doc.amount != null)
         .fold(0.0, (sum, doc) => sum + doc.amount!);
-        
+
     final statusCounts = <DocumentStatus, int>{};
     for (var status in DocumentStatus.values) {
-      statusCounts[status] = documents.where((doc) => doc.status == status).length;
+      statusCounts[status] = documents
+          .where((doc) => doc.status == status)
+          .length;
     }
 
     return pw.Column(
@@ -603,8 +627,9 @@ class PrintingService {
         pw.Text('إجمالي المبالغ: $totalAmount دينار'),
         pw.SizedBox(height: 10),
         pw.Text('توزيع حسب الحالة:'),
-        ...statusCounts.entries.map((entry) => 
-          pw.Text('${_getStatusText(entry.key)}: ${entry.value}')),
+        ...statusCounts.entries.map(
+          (entry) => pw.Text('${_getStatusText(entry.key)}: ${entry.value}'),
+        ),
       ],
     );
   }

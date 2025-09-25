@@ -7,12 +7,14 @@ class OrganizationSettingsScreen extends StatefulWidget {
   const OrganizationSettingsScreen({Key? key}) : super(key: key);
 
   @override
-  State<OrganizationSettingsScreen> createState() => _OrganizationSettingsScreenState();
+  State<OrganizationSettingsScreen> createState() =>
+      _OrganizationSettingsScreenState();
 }
 
-class _OrganizationSettingsScreenState extends State<OrganizationSettingsScreen> {
+class _OrganizationSettingsScreenState
+    extends State<OrganizationSettingsScreen> {
   final _formKey = GlobalKey<FormState>();
-  
+
   // Controllers للنصوص
   final _departmentNameController = TextEditingController();
   final _bankAccountController = TextEditingController();
@@ -22,10 +24,10 @@ class _OrganizationSettingsScreenState extends State<OrganizationSettingsScreen>
   final _directorNameController = TextEditingController();
   final _jobTitleController = TextEditingController();
   final _assignedWorkController = TextEditingController();
-  
+
   // متغيرات الاختيار
   String _selectedPositionType = 'مدير عام';
-  
+
   bool _isLoading = false;
 
   @override
@@ -50,11 +52,14 @@ class _OrganizationSettingsScreenState extends State<OrganizationSettingsScreen>
 
   Future<void> _loadOrganizationData() async {
     setState(() => _isLoading = true);
-    
+
     try {
-      final provider = Provider.of<OrganizationProvider>(context, listen: false);
+      final provider = Provider.of<OrganizationProvider>(
+        context,
+        listen: false,
+      );
       await provider.loadOrganization();
-      
+
       final org = provider.organization;
       if (org != null) {
         _departmentNameController.text = org.departmentName ?? '';
@@ -78,10 +83,13 @@ class _OrganizationSettingsScreenState extends State<OrganizationSettingsScreen>
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
-    
+
     try {
-      final provider = Provider.of<OrganizationProvider>(context, listen: false);
-      
+      final provider = Provider.of<OrganizationProvider>(
+        context,
+        listen: false,
+      );
+
       final organization = Organization(
         departmentName: _departmentNameController.text.trim(),
         bankAccount: _bankAccountController.text.trim(),
@@ -105,10 +113,9 @@ class _OrganizationSettingsScreenState extends State<OrganizationSettingsScreen>
       }
 
       await provider.saveOrganization(organization);
-      
+
       _showSuccessSnackBar('تم حفظ بيانات المؤسسة بنجاح');
       Navigator.pop(context);
-      
     } catch (e) {
       _showErrorSnackBar('خطأ في حفظ بيانات المؤسسة: $e');
     } finally {
@@ -318,16 +325,10 @@ class _OrganizationSettingsScreenState extends State<OrganizationSettingsScreen>
       decoration: const InputDecoration(
         labelText: 'نوع المنصب',
         border: OutlineInputBorder(),
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
       items: ['مدير عام', 'مخول بالصلاحيات'].map((type) {
-        return DropdownMenuItem<String>(
-          value: type,
-          child: Text(type),
-        );
+        return DropdownMenuItem<String>(value: type, child: Text(type));
       }).toList(),
       onChanged: (String? newValue) {
         if (newValue != null) {
@@ -343,19 +344,19 @@ class _OrganizationSettingsScreenState extends State<OrganizationSettingsScreen>
     if (value?.trim().isEmpty == true) {
       return 'رقم الآيبان مطلوب';
     }
-    
+
     final iban = value!.trim().toUpperCase();
-    
+
     // التحقق من الطول (العراق 23 رقم)
     if (iban.length != 23) {
       return 'رقم الآيبان يجب أن يكون 23 رقم';
     }
-    
+
     // التحقق من بداية رقم الآيبان العراقي
     if (!iban.startsWith('IQ')) {
       return 'رقم الآيبان يجب أن يبدأ بـ IQ';
     }
-    
+
     return null;
   }
 

@@ -12,7 +12,7 @@ class Document {
   DateTime? documentDate; // تاريخ المستند
 
   double? amount; // المبلغ (رقماً)
-  
+
   String? amountInWords; // المبلغ (كتابة)
 
   String? departmentIban; // ايبان الدائرة
@@ -27,7 +27,7 @@ class Document {
   DocumentStatus status = DocumentStatus.notUploaded; // مرفوع او غير مرفوع
 
   DateTime? uploadDate; // تاريخ الرفع
-  
+
   String? bankNotificationNumber; // رقم الإشعار البنكي
 
   String? qrCodeData; // بيانات QR Code
@@ -102,8 +102,8 @@ class Document {
   static Document fromJson(Map<String, dynamic> json) {
     return Document(
       outgoingNumber: json['outgoingNumber'],
-      documentDate: json['documentDate'] != null 
-          ? DateTime.parse(json['documentDate']) 
+      documentDate: json['documentDate'] != null
+          ? DateTime.parse(json['documentDate'])
           : null,
       amount: json['amount']?.toDouble(),
       amountInWords: json['amountInWords'],
@@ -115,23 +115,23 @@ class Document {
         (e) => e.name == json['status'],
         orElse: () => DocumentStatus.notUploaded,
       ),
-      uploadDate: json['uploadDate'] != null 
-          ? DateTime.parse(json['uploadDate']) 
+      uploadDate: json['uploadDate'] != null
+          ? DateTime.parse(json['uploadDate'])
           : null,
       bankNotificationNumber: json['bankNotificationNumber'],
       qrCodeData: json['qrCodeData'],
       isEncrypted: json['isEncrypted'] ?? false,
       encryptedContent: json['encryptedContent'],
       batchId: json['batchId'],
-      printedDate: json['printedDate'] != null 
-          ? DateTime.parse(json['printedDate']) 
+      printedDate: json['printedDate'] != null
+          ? DateTime.parse(json['printedDate'])
           : null,
       isPrinted: json['isPrinted'] ?? false,
-      createdAt: json['createdAt'] != null 
-          ? DateTime.parse(json['createdAt']) 
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
           : null,
-      updatedAt: json['updatedAt'] != null 
-          ? DateTime.parse(json['updatedAt']) 
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'])
           : null,
       remarks: json['remarks'],
     );
@@ -143,7 +143,7 @@ enum DocumentStatus {
   printed, // مطبوع
   uploaded, // مرفوع
   notUploaded, // غير مرفوع
-  archived // مؤرشف
+  archived, // مؤرشف
 }
 
 @collection
@@ -172,7 +172,7 @@ enum PrintBatchStatus {
   created, // تم الإنشاء
   printing, // جاري الطباعة
   completed, // مكتمل
-  cancelled // ملغي
+  cancelled, // ملغي
 }
 
 @collection

@@ -10,7 +10,7 @@ class Organization {
   String? departmentName; // اسم الدائرة
 
   String? bankAccount; // الحساب المصرفي
-  
+
   String? iban; // الايبان
 
   String? accountNumber; // رقم الحساب
@@ -71,11 +71,11 @@ class Organization {
       jobTitle: json['jobTitle'],
       assignedWork: json['assignedWork'],
       positionType: json['positionType'],
-      createdAt: json['createdAt'] != null 
-          ? DateTime.parse(json['createdAt']) 
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
           : null,
-      updatedAt: json['updatedAt'] != null 
-          ? DateTime.parse(json['updatedAt']) 
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'])
           : null,
     );
   }

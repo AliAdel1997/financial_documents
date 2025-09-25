@@ -19,7 +19,7 @@ class ExcelService {
     'الحالة',
     'تاريخ الرفع',
     'رقم الإشعار البنكي',
-    'ملاحظات'
+    'ملاحظات',
   ];
 
   /// قراءة المستندات من ملف Excel
@@ -38,7 +38,7 @@ class ExcelService {
 
       final file = File(result.files.single.path!);
       final bytes = await file.readAsBytes();
-      
+
       return _parseExcelFile(bytes);
     } catch (e) {
       throw Exception('خطأ في قراءة ملف Excel: $e');
@@ -68,7 +68,7 @@ class ExcelService {
       // تخطي الصف الأول (العناوين) والبدء من الصف الثاني
       for (int i = 1; i < sheet.rows.length; i++) {
         final row = sheet.rows[i];
-        
+
         // التأكد من أن الصف يحتوي على بيانات كافية
         if (row.length < 8) continue;
 
@@ -104,7 +104,9 @@ class ExcelService {
       final documentDetails = _parseStringFromCell(row[7]);
 
       // التحقق من البيانات الأساسية المطلوبة
-      if (outgoingNumber == null || documentDetails == null || documentDetails.trim().isEmpty) {
+      if (outgoingNumber == null ||
+          documentDetails == null ||
+          documentDetails.trim().isEmpty) {
         return null;
       }
 
@@ -134,7 +136,7 @@ class ExcelService {
   }) async {
     try {
       final excel = Excel.createExcel();
-      
+
       // إنشاء ورقة جديدة
       final sheetName = 'المستندات';
       excel.rename(excel.getDefaultSheet() ?? 'Sheet1', sheetName);
@@ -159,7 +161,7 @@ class ExcelService {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final finalFileName = fileName ?? 'documents_export_$timestamp.xlsx';
       final filePath = path.join(directory.path, finalFileName);
-      
+
       final fileBytes = excel.save();
       if (fileBytes != null) {
         final file = File(filePath);
@@ -177,88 +179,154 @@ class ExcelService {
   static void _addOrganizationInfo(Sheet sheet, Organization organization) {
     // عنوان المؤسسة
     sheet.cell(CellIndex.indexByString("A1")).value = 'اسم الدائرة:';
-    sheet.cell(CellIndex.indexByString("B1")).value = organization.departmentName ?? '';
-    
+    sheet.cell(CellIndex.indexByString("B1")).value =
+        organization.departmentName ?? '';
+
     sheet.cell(CellIndex.indexByString("A2")).value = 'اسم المصرف:';
-    sheet.cell(CellIndex.indexByString("B2")).value = organization.bankName ?? '';
-    
+    sheet.cell(CellIndex.indexByString("B2")).value =
+        organization.bankName ?? '';
+
     sheet.cell(CellIndex.indexByString("A3")).value = 'الايبان:';
     sheet.cell(CellIndex.indexByString("B3")).value = organization.iban ?? '';
-    
+
     sheet.cell(CellIndex.indexByString("A4")).value = 'اسم المدير:';
-    sheet.cell(CellIndex.indexByString("B4")).value = organization.directorName ?? '';
+    sheet.cell(CellIndex.indexByString("B4")).value =
+        organization.directorName ?? '';
   }
 
   /// إضافة عناوين الأعمدة
   static void _addHeaders(Sheet sheet, int startRow) {
     for (int i = 0; i < _documentHeaders.length; i++) {
-      final cellIndex = CellIndex.indexByColumnRow(columnIndex: i, rowIndex: startRow);
+      final cellIndex = CellIndex.indexByColumnRow(
+        columnIndex: i,
+        rowIndex: startRow,
+      );
       sheet.cell(cellIndex).value = _documentHeaders[i];
     }
   }
 
   /// إضافة بيانات المستندات
-  static void _addDocumentData(Sheet sheet, List<Document> documents, int startRow) {
+  static void _addDocumentData(
+    Sheet sheet,
+    List<Document> documents,
+    int startRow,
+  ) {
     for (int i = 0; i < documents.length; i++) {
       final document = documents[i];
       final rowIndex = startRow + i;
 
       // رقم الصادر
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIndex))
-          .value = document.outgoingNumber ?? 0;
+      sheet
+              .cell(
+                CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIndex),
+              )
+              .value =
+          document.outgoingNumber ?? 0;
 
       // تاريخ المستند
       if (document.documentDate != null) {
-        final dateStr = '${document.documentDate!.year}-${document.documentDate!.month.toString().padLeft(2, '0')}-${document.documentDate!.day.toString().padLeft(2, '0')}';
-        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: rowIndex))
-            .value = dateStr;
+        final dateStr =
+            '${document.documentDate!.year}-${document.documentDate!.month.toString().padLeft(2, '0')}-${document.documentDate!.day.toString().padLeft(2, '0')}';
+        sheet
+                .cell(
+                  CellIndex.indexByColumnRow(
+                    columnIndex: 1,
+                    rowIndex: rowIndex,
+                  ),
+                )
+                .value =
+            dateStr;
       }
 
       // المبلغ (رقماً)
       if (document.amount != null) {
-        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: rowIndex))
-            .value = document.amount!;
+        sheet
+            .cell(
+              CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: rowIndex),
+            )
+            .value = document
+            .amount!;
       }
 
       // المبلغ (كتابة)
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: rowIndex))
-          .value = document.amountInWords ?? '';
+      sheet
+              .cell(
+                CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: rowIndex),
+              )
+              .value =
+          document.amountInWords ?? '';
 
       // ايبان الدائرة
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: rowIndex))
-          .value = document.departmentIban ?? '';
+      sheet
+              .cell(
+                CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: rowIndex),
+              )
+              .value =
+          document.departmentIban ?? '';
 
       // ايبان الجهة المراد التحويل إليها
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: rowIndex))
-          .value = document.recipientIban ?? '';
+      sheet
+              .cell(
+                CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: rowIndex),
+              )
+              .value =
+          document.recipientIban ?? '';
 
       // عنوان الجهة
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: rowIndex))
-          .value = document.recipientAddress ?? '';
+      sheet
+              .cell(
+                CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: rowIndex),
+              )
+              .value =
+          document.recipientAddress ?? '';
 
       // تفاصيل الكتاب
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 7, rowIndex: rowIndex))
-          .value = document.documentDetails ?? '';
+      sheet
+              .cell(
+                CellIndex.indexByColumnRow(columnIndex: 7, rowIndex: rowIndex),
+              )
+              .value =
+          document.documentDetails ?? '';
 
       // الحالة
       String statusText = _getStatusText(document.status);
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 8, rowIndex: rowIndex))
-          .value = statusText;
+      sheet
+              .cell(
+                CellIndex.indexByColumnRow(columnIndex: 8, rowIndex: rowIndex),
+              )
+              .value =
+          statusText;
 
       // تاريخ الرفع
       if (document.uploadDate != null) {
-        final dateStr = '${document.uploadDate!.year}-${document.uploadDate!.month.toString().padLeft(2, '0')}-${document.uploadDate!.day.toString().padLeft(2, '0')}';
-        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 9, rowIndex: rowIndex))
-            .value = dateStr;
+        final dateStr =
+            '${document.uploadDate!.year}-${document.uploadDate!.month.toString().padLeft(2, '0')}-${document.uploadDate!.day.toString().padLeft(2, '0')}';
+        sheet
+                .cell(
+                  CellIndex.indexByColumnRow(
+                    columnIndex: 9,
+                    rowIndex: rowIndex,
+                  ),
+                )
+                .value =
+            dateStr;
       }
 
       // رقم الإشعار البنكي
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 10, rowIndex: rowIndex))
-          .value = document.bankNotificationNumber ?? '';
+      sheet
+              .cell(
+                CellIndex.indexByColumnRow(columnIndex: 10, rowIndex: rowIndex),
+              )
+              .value =
+          document.bankNotificationNumber ?? '';
 
       // ملاحظات
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 11, rowIndex: rowIndex))
-          .value = document.remarks ?? '';
+      sheet
+              .cell(
+                CellIndex.indexByColumnRow(columnIndex: 11, rowIndex: rowIndex),
+              )
+              .value =
+          document.remarks ?? '';
     }
   }
 
@@ -271,7 +339,7 @@ class ExcelService {
   /// Helper functions لتحليل البيانات من خلايا Excel
   static int? _parseIntFromCell(Data? cell) {
     if (cell == null || cell.value == null) return null;
-    
+
     final value = cell.value;
     if (value is int) {
       return value;
@@ -281,13 +349,13 @@ class ExcelService {
       final text = value.trim();
       return int.tryParse(text);
     }
-    
+
     return null;
   }
 
   static double? _parseDoubleFromCell(Data? cell) {
     if (cell == null || cell.value == null) return null;
-    
+
     final value = cell.value;
     if (value is double) {
       return value;
@@ -297,13 +365,13 @@ class ExcelService {
       final text = value.trim();
       return double.tryParse(text);
     }
-    
+
     return null;
   }
 
   static String? _parseStringFromCell(Data? cell) {
     if (cell == null || cell.value == null) return null;
-    
+
     final value = cell.value;
     if (value is String) {
       return value;
@@ -312,17 +380,17 @@ class ExcelService {
     } else if (value is double) {
       return value.toString();
     }
-    
+
     return null;
   }
 
   static DateTime? _parseDateFromCell(Data? cell) {
     if (cell == null || cell.value == null) return null;
-    
+
     final value = cell.value;
     if (value is String) {
       final text = value.trim();
-      
+
       // محاولة تحليل التاريخ بعدة تنسيقات مختلفة
       final dateFormats = [
         RegExp(r'(\d{4})-(\d{1,2})-(\d{1,2})'), // YYYY-MM-DD
@@ -335,7 +403,7 @@ class ExcelService {
         if (match != null) {
           try {
             int year, month, day;
-            
+
             if (format.pattern.contains(r'(\d{4})')) {
               // تنسيق YYYY-MM-DD
               year = int.parse(match.group(1)!);
@@ -347,7 +415,7 @@ class ExcelService {
               month = int.parse(match.group(2)!);
               year = int.parse(match.group(3)!);
             }
-            
+
             return DateTime(year, month, day);
           } catch (e) {
             continue;
@@ -355,7 +423,7 @@ class ExcelService {
         }
       }
     }
-    
+
     return null;
   }
 

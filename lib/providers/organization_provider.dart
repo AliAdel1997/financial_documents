@@ -64,7 +64,7 @@ class OrganizationProvider with ChangeNotifier {
       if (bankAccount != null) _organization!.bankAccount = bankAccount;
       if (iban != null) _organization!.iban = iban;
       if (accountNumber != null) _organization!.accountNumber = accountNumber;
-      
+
       await _saveCurrentOrganization();
     }
   }
@@ -81,7 +81,7 @@ class OrganizationProvider with ChangeNotifier {
       if (jobTitle != null) _organization!.jobTitle = jobTitle;
       if (assignedWork != null) _organization!.assignedWork = assignedWork;
       if (positionType != null) _organization!.positionType = positionType;
-      
+
       await _saveCurrentOrganization();
     }
   }
@@ -108,13 +108,13 @@ class OrganizationProvider with ChangeNotifier {
   /// التحقق من اكتمال البيانات الأساسية
   bool get isDataComplete {
     if (_organization == null) return false;
-    
+
     return _organization!.departmentName != null &&
-           _organization!.departmentName!.isNotEmpty &&
-           _organization!.directorName != null &&
-           _organization!.directorName!.isNotEmpty &&
-           _organization!.bankName != null &&
-           _organization!.bankName!.isNotEmpty;
+        _organization!.departmentName!.isNotEmpty &&
+        _organization!.directorName != null &&
+        _organization!.directorName!.isNotEmpty &&
+        _organization!.bankName != null &&
+        _organization!.bankName!.isNotEmpty;
   }
 
   /// حفظ المؤسسة الحالية

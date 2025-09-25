@@ -11,6 +11,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   try {
+    // تهيئة بيانات التاريخ العربية
+    await initializeDateFormatting('ar', null);
+    
     // تهيئة قاعدة البيانات
     await DatabaseService.initialize();
     
@@ -22,9 +25,7 @@ void main() async {
     // في حالة فشل التهيئة، عرض رسالة خطأ
     runApp(ErrorApp(error: e.toString()));
   }
-}
-
-class MyApp extends StatelessWidget {
+}class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
@@ -71,7 +72,7 @@ class MyApp extends StatelessWidget {
 
 class ErrorApp extends StatelessWidget {
   final String error;
-  
+
   const ErrorApp({super.key, required this.error});
 
   @override
@@ -89,18 +90,11 @@ class ErrorApp extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.error_outline,
-                  size: 64,
-                  color: Colors.red,
-                ),
+                const Icon(Icons.error_outline, size: 64, color: Colors.red),
                 const SizedBox(height: 16),
                 const Text(
                   'حدث خطأ أثناء تهيئة التطبيق',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),

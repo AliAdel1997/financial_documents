@@ -10,7 +10,8 @@ class ReportsByRecipientScreen extends StatefulWidget {
   const ReportsByRecipientScreen({Key? key}) : super(key: key);
 
   @override
-  State<ReportsByRecipientScreen> createState() => _ReportsByRecipientScreenState();
+  State<ReportsByRecipientScreen> createState() =>
+      _ReportsByRecipientScreenState();
 }
 
 class _ReportsByRecipientScreenState extends State<ReportsByRecipientScreen> {
@@ -19,7 +20,7 @@ class _ReportsByRecipientScreenState extends State<ReportsByRecipientScreen> {
   DateTime? _endDate;
   DocumentStatus? _selectedStatus;
   bool _isLoading = false;
-  
+
   List<Document> _filteredDocuments = [];
   Map<String, List<Document>> _documentsByRecipient = {};
   Map<String, double> _totalAmountsByRecipient = {};
@@ -32,7 +33,7 @@ class _ReportsByRecipientScreenState extends State<ReportsByRecipientScreen> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    
+
     try {
       final provider = Provider.of<DocumentsProvider>(context, listen: false);
       await provider.loadDocuments();
@@ -47,53 +48,57 @@ class _ReportsByRecipientScreenState extends State<ReportsByRecipientScreen> {
   void _applyFilters() {
     final provider = Provider.of<DocumentsProvider>(context, listen: false);
     List<Document> documents = List.from(provider.documents);
-    
+
     // تطبيق فلتر التاريخ
     if (_startDate != null) {
       documents = documents.where((doc) {
-        return doc.documentDate != null && 
-               doc.documentDate!.isAfter(_startDate!.subtract(const Duration(days: 1)));
+        return doc.documentDate != null &&
+            doc.documentDate!.isAfter(
+              _startDate!.subtract(const Duration(days: 1)),
+            );
       }).toList();
     }
-    
+
     if (_endDate != null) {
       documents = documents.where((doc) {
-        return doc.documentDate != null && 
-               doc.documentDate!.isBefore(_endDate!.add(const Duration(days: 1)));
+        return doc.documentDate != null &&
+            doc.documentDate!.isBefore(_endDate!.add(const Duration(days: 1)));
       }).toList();
     }
-    
+
     // تطبيق فلتر الحالة
     if (_selectedStatus != null) {
-      documents = documents.where((doc) => doc.status == _selectedStatus).toList();
+      documents = documents
+          .where((doc) => doc.status == _selectedStatus)
+          .toList();
     }
-    
+
     // تطبيق فلتر الجهة
     if (_selectedRecipient != null) {
       documents = documents.where((doc) {
         return doc.recipientAddress?.contains(_selectedRecipient!) == true;
       }).toList();
     }
-    
+
     // تجميع المستندات حسب الجهة
     _documentsByRecipient.clear();
     _totalAmountsByRecipient.clear();
-    
+
     for (var doc in documents) {
       final recipient = doc.recipientAddress ?? 'غير محدد';
-      
+
       if (_documentsByRecipient.containsKey(recipient)) {
         _documentsByRecipient[recipient]!.add(doc);
       } else {
         _documentsByRecipient[recipient] = [doc];
       }
-      
+
       // حساب المجموع
       final amount = doc.amount ?? 0.0;
-      _totalAmountsByRecipient[recipient] = 
+      _totalAmountsByRecipient[recipient] =
           (_totalAmountsByRecipient[recipient] ?? 0.0) + amount;
     }
-    
+
     setState(() {
       _filteredDocuments = documents;
     });
@@ -102,14 +107,14 @@ class _ReportsByRecipientScreenState extends State<ReportsByRecipientScreen> {
   Future<void> _selectDate(BuildContext context, bool isStartDate) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: isStartDate 
-          ? (_startDate ?? DateTime.now()) 
+      initialDate: isStartDate
+          ? (_startDate ?? DateTime.now())
           : (_endDate ?? DateTime.now()),
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
       locale: const Locale('ar'),
     );
-    
+
     if (picked != null) {
       setState(() {
         if (isStartDate) {
@@ -127,14 +132,12 @@ class _ReportsByRecipientScreenState extends State<ReportsByRecipientScreen> {
       _showErrorSnackBar('لا توجد بيانات للتصدير');
       return;
     }
-    
+
     setState(() => _isLoading = true);
-    
+
     try {
-      await ExcelService.exportDocumentsToExcel(
-        _filteredDocuments,
-      );
-      
+      await ExcelService.exportDocumentsToExcel(_filteredDocuments);
+
       _showSuccessSnackBar('تم تصدير التقرير بنجاح');
     } catch (e) {
       _showErrorSnackBar('خطأ في تصدير التقرير: $e');
@@ -166,55 +169,54 @@ class _ReportsByRecipientScreenState extends State<ReportsByRecipientScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: const Text('تقارير حسب الجهة'),
-          backgroundColor: Colors.blue[700],
-          foregroundColor: Colors.white,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.file_download),
-              onPressed: _isLoading ? null : _exportToExcel,
-              tooltip: 'تصدير إلى Excel',
+      appBar: AppBar(
+        title: const Text('تقارير حسب الجهة'),
+        backgroundColor: Colors.blue[700],
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.file_download),
+            onPressed: _isLoading ? null : _exportToExcel,
+            tooltip: 'تصدير إلى Excel',
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _isLoading ? null : _loadData,
+            tooltip: 'تحديث',
+          ),
+        ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                _buildFiltersCard(),
+                _buildSummaryCard(),
+                Expanded(child: _buildReportsList()),
+              ],
             ),
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: _isLoading ? null : _loadData,
-              tooltip: 'تحديث',
-            ),
-          ],
-        ),
-        body: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
-                children: [
-                  _buildFiltersCard(),
-                  _buildSummaryCard(),
-                  Expanded(child: _buildReportsList()),
-                ],
-              ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const AddDocumentScreen(),
-              ),
-            ).then((_) => _loadData());
-          },
-          backgroundColor: Colors.blue[700],
-          child: const Icon(Icons.add, color: Colors.white),
-          tooltip: 'إضافة مستند جديد',
-        ),
-      );
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddDocumentScreen()),
+          ).then((_) => _loadData());
+        },
+        backgroundColor: Colors.blue[700],
+        child: const Icon(Icons.add, color: Colors.white),
+        tooltip: 'إضافة مستند جديد',
+      ),
+    );
   }
 
   Widget _buildFiltersCard() {
     final provider = Provider.of<DocumentsProvider>(context);
-    final recipients = provider.documents
-        .map((doc) => doc.recipientAddress ?? 'غير محدد')
-        .toSet()
-        .toList()
-      ..sort();
+    final recipients =
+        provider.documents
+            .map((doc) => doc.recipientAddress ?? 'غير محدد')
+            .toSet()
+            .toList()
+          ..sort();
 
     return Card(
       margin: const EdgeInsets.all(16),
@@ -229,73 +231,76 @@ class _ReportsByRecipientScreenState extends State<ReportsByRecipientScreen> {
                 const SizedBox(width: 8),
                 const Text(
                   'فلاتر البحث',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            
+
             // فلتر الجهة
             DropdownButtonFormField<String>(
               value: _selectedRecipient,
               decoration: const InputDecoration(
                 labelText: 'الجهة',
                 border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
               items: [
                 const DropdownMenuItem<String>(
                   value: null,
                   child: Text('جميع الجهات'),
                 ),
-                ...recipients.map((recipient) => DropdownMenuItem<String>(
-                  value: recipient,
-                  child: Text(recipient),
-                )),
+                ...recipients.map(
+                  (recipient) => DropdownMenuItem<String>(
+                    value: recipient,
+                    child: Text(recipient),
+                  ),
+                ),
               ],
               onChanged: (value) {
                 setState(() => _selectedRecipient = value);
                 _applyFilters();
               },
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // فلاتر التاريخ
             Row(
               children: [
-                Expanded(
-                  child: _buildDateFilter('من تاريخ', _startDate, true),
-                ),
+                Expanded(child: _buildDateFilter('من تاريخ', _startDate, true)),
                 const SizedBox(width: 16),
-                Expanded(
-                  child: _buildDateFilter('إلى تاريخ', _endDate, false),
-                ),
+                Expanded(child: _buildDateFilter('إلى تاريخ', _endDate, false)),
               ],
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // فلتر الحالة
             DropdownButtonFormField<DocumentStatus>(
               value: _selectedStatus,
               decoration: const InputDecoration(
                 labelText: 'حالة المستند',
                 border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
               items: [
                 const DropdownMenuItem<DocumentStatus>(
                   value: null,
                   child: Text('جميع الحالات'),
                 ),
-                ...DocumentStatus.values.map((status) => DropdownMenuItem<DocumentStatus>(
-                  value: status,
-                  child: Text(_getStatusText(status)),
-                )),
+                ...DocumentStatus.values.map(
+                  (status) => DropdownMenuItem<DocumentStatus>(
+                    value: status,
+                    child: Text(_getStatusText(status)),
+                  ),
+                ),
               ],
               onChanged: (value) {
                 setState(() => _selectedStatus = value);
@@ -315,11 +320,14 @@ class _ReportsByRecipientScreenState extends State<ReportsByRecipientScreen> {
         decoration: InputDecoration(
           labelText: label,
           border: const OutlineInputBorder(),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 8,
+          ),
           suffixIcon: const Icon(Icons.calendar_today, size: 20),
         ),
         child: Text(
-          date != null 
+          date != null
               ? intl.DateFormat('yyyy/MM/dd').format(date)
               : 'اختر التاريخ',
           style: TextStyle(
@@ -333,7 +341,7 @@ class _ReportsByRecipientScreenState extends State<ReportsByRecipientScreen> {
 
   Widget _buildSummaryCard() {
     if (_filteredDocuments.isEmpty) return const SizedBox();
-    
+
     final totalCount = _filteredDocuments.length;
     final totalAmount = _filteredDocuments
         .map((doc) => doc.amount ?? 0.0)
@@ -374,13 +382,7 @@ class _ReportsByRecipientScreenState extends State<ReportsByRecipientScreen> {
       children: [
         Icon(icon, color: Colors.blue[700], size: 24),
         const SizedBox(height: 4),
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.grey,
-          ),
-        ),
+        Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey)),
         const SizedBox(height: 2),
         Text(
           value,
@@ -433,7 +435,10 @@ class _ReportsByRecipientScreenState extends State<ReportsByRecipientScreen> {
               backgroundColor: Colors.blue[700],
               child: Text(
                 '${documents.length}',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             children: documents.map((doc) => _buildDocumentTile(doc)).toList(),
@@ -450,7 +455,9 @@ class _ReportsByRecipientScreenState extends State<ReportsByRecipientScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('التاريخ: ${_formatDate(document.documentDate)}'),
-          Text('المبلغ: ${intl.NumberFormat('#,##0.00').format(document.amount ?? 0)} د.ع'),
+          Text(
+            'المبلغ: ${intl.NumberFormat('#,##0.00').format(document.amount ?? 0)} د.ع',
+          ),
           Text('الحالة: ${_getStatusText(document.status)}'),
         ],
       ),
@@ -484,11 +491,7 @@ class _ReportsByRecipientScreenState extends State<ReportsByRecipientScreen> {
           const PopupMenuItem(
             value: 'edit',
             child: Row(
-              children: [
-                Icon(Icons.edit),
-                SizedBox(width: 8),
-                Text('تعديل'),
-              ],
+              children: [Icon(Icons.edit), SizedBox(width: 8), Text('تعديل')],
             ),
           ),
         ],
@@ -506,19 +509,49 @@ class _ReportsByRecipientScreenState extends State<ReportsByRecipientScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildDetailRow('رقم الصادر', '${document.outgoingNumber ?? 'غير محدد'}'),
-              _buildDetailRow('تاريخ المستند', _formatDate(document.documentDate)),
-              _buildDetailRow('المبلغ رقماً', '${intl.NumberFormat('#,##0.00').format(document.amount ?? 0)} د.ع'),
-              _buildDetailRow('المبلغ كتابة', document.amountInWords ?? 'غير محدد'),
-              _buildDetailRow('إيبان الدائرة', document.departmentIban ?? 'غير محدد'),
-              _buildDetailRow('إيبان المستفيد', document.recipientIban ?? 'غير محدد'),
-              _buildDetailRow('عنوان الجهة', document.recipientAddress ?? 'غير محدد'),
-              _buildDetailRow('تفاصيل المستند', document.documentDetails ?? 'غير محدد'),
+              _buildDetailRow(
+                'رقم الصادر',
+                '${document.outgoingNumber ?? 'غير محدد'}',
+              ),
+              _buildDetailRow(
+                'تاريخ المستند',
+                _formatDate(document.documentDate),
+              ),
+              _buildDetailRow(
+                'المبلغ رقماً',
+                '${intl.NumberFormat('#,##0.00').format(document.amount ?? 0)} د.ع',
+              ),
+              _buildDetailRow(
+                'المبلغ كتابة',
+                document.amountInWords ?? 'غير محدد',
+              ),
+              _buildDetailRow(
+                'إيبان الدائرة',
+                document.departmentIban ?? 'غير محدد',
+              ),
+              _buildDetailRow(
+                'إيبان المستفيد',
+                document.recipientIban ?? 'غير محدد',
+              ),
+              _buildDetailRow(
+                'عنوان الجهة',
+                document.recipientAddress ?? 'غير محدد',
+              ),
+              _buildDetailRow(
+                'تفاصيل المستند',
+                document.documentDetails ?? 'غير محدد',
+              ),
               _buildDetailRow('الحالة', _getStatusText(document.status)),
               if (document.uploadDate != null)
-                _buildDetailRow('تاريخ الرفع', _formatDate(document.uploadDate)),
+                _buildDetailRow(
+                  'تاريخ الرفع',
+                  _formatDate(document.uploadDate),
+                ),
               if (document.bankNotificationNumber?.isNotEmpty == true)
-                _buildDetailRow('رقم الإشعار البنكي', document.bankNotificationNumber!),
+                _buildDetailRow(
+                  'رقم الإشعار البنكي',
+                  document.bankNotificationNumber!,
+                ),
             ],
           ),
         ),
