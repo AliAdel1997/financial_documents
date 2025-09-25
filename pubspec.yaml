@@ -1,5 +1,5 @@
 name: financial_documents
-description: "A new Flutter project."
+description: "A simple document printing and archiving system using Flutter and Isar."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -31,6 +31,35 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Database
+  isar: ^3.1.0+1
+  isar_flutter_libs: ^3.1.0+1
+
+  # Excel operations
+  excel: ^2.1.0
+  file_picker: ^6.1.1
+
+  # PDF and printing
+  pdf: ^3.10.7
+  printing: ^5.12.0
+
+  # QR Code
+  qr_flutter: ^4.1.0
+
+  # Encryption
+  crypto: ^3.0.3
+  encrypt: ^5.0.3
+
+  # File operations
+  path_provider: ^2.1.2
+  path: ^1.8.3
+
+  # State management
+  provider: ^6.1.1
+
+  # Date formatting and internationalization
+  intl: ^0.19.0
+
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
@@ -38,6 +67,10 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
+  # Build runner for code generation
+  build_runner: ^2.4.7
+  isar_generator: ^3.1.0+1
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
