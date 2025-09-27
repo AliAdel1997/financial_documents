@@ -108,13 +108,18 @@ const DocumentSchema = CollectionSchema(
       type: IsarType.string,
       enumMap: _DocumentstatusEnumValueMap,
     ),
-    r'updatedAt': PropertySchema(
+    r'subject': PropertySchema(
       id: 18,
+      name: r'subject',
+      type: IsarType.string,
+    ),
+    r'updatedAt': PropertySchema(
+      id: 19,
       name: r'updatedAt',
       type: IsarType.dateTime,
     ),
     r'uploadDate': PropertySchema(
-      id: 19,
+      id: 20,
       name: r'uploadDate',
       type: IsarType.dateTime,
     )
@@ -214,6 +219,12 @@ int _documentEstimateSize(
     }
   }
   bytesCount += 3 + object.status.name.length * 3;
+  {
+    final value = object.subject;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   return bytesCount;
 }
 
@@ -241,8 +252,9 @@ void _documentSerialize(
   writer.writeString(offsets[15], object.recipientIban);
   writer.writeString(offsets[16], object.remarks);
   writer.writeString(offsets[17], object.status.name);
-  writer.writeDateTime(offsets[18], object.updatedAt);
-  writer.writeDateTime(offsets[19], object.uploadDate);
+  writer.writeString(offsets[18], object.subject);
+  writer.writeDateTime(offsets[19], object.updatedAt);
+  writer.writeDateTime(offsets[20], object.uploadDate);
 }
 
 Document _documentDeserialize(
@@ -271,10 +283,11 @@ Document _documentDeserialize(
     remarks: reader.readStringOrNull(offsets[16]),
     status: _DocumentstatusValueEnumMap[reader.readStringOrNull(offsets[17])] ??
         DocumentStatus.notUploaded,
-    updatedAt: reader.readDateTimeOrNull(offsets[18]),
-    uploadDate: reader.readDateTimeOrNull(offsets[19]),
+    updatedAt: reader.readDateTimeOrNull(offsets[19]),
+    uploadDate: reader.readDateTimeOrNull(offsets[20]),
   );
   object.id = id;
+  object.subject = reader.readStringOrNull(offsets[18]);
   return object;
 }
 
@@ -323,8 +336,10 @@ P _documentDeserializeProp<P>(
       return (_DocumentstatusValueEnumMap[reader.readStringOrNull(offset)] ??
           DocumentStatus.notUploaded) as P;
     case 18:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 19:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 20:
       return (reader.readDateTimeOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -2689,6 +2704,152 @@ extension DocumentQueryFilter
     });
   }
 
+  QueryBuilder<Document, Document, QAfterFilterCondition> subjectIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'subject',
+      ));
+    });
+  }
+
+  QueryBuilder<Document, Document, QAfterFilterCondition> subjectIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'subject',
+      ));
+    });
+  }
+
+  QueryBuilder<Document, Document, QAfterFilterCondition> subjectEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'subject',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Document, Document, QAfterFilterCondition> subjectGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'subject',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Document, Document, QAfterFilterCondition> subjectLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'subject',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Document, Document, QAfterFilterCondition> subjectBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'subject',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Document, Document, QAfterFilterCondition> subjectStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'subject',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Document, Document, QAfterFilterCondition> subjectEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'subject',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Document, Document, QAfterFilterCondition> subjectContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'subject',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Document, Document, QAfterFilterCondition> subjectMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'subject',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Document, Document, QAfterFilterCondition> subjectIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'subject',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Document, Document, QAfterFilterCondition> subjectIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'subject',
+        value: '',
+      ));
+    });
+  }
+
   QueryBuilder<Document, Document, QAfterFilterCondition> updatedAtIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -3054,6 +3215,18 @@ extension DocumentQuerySortBy on QueryBuilder<Document, Document, QSortBy> {
     });
   }
 
+  QueryBuilder<Document, Document, QAfterSortBy> sortBySubject() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'subject', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Document, Document, QAfterSortBy> sortBySubjectDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'subject', Sort.desc);
+    });
+  }
+
   QueryBuilder<Document, Document, QAfterSortBy> sortByUpdatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'updatedAt', Sort.asc);
@@ -3311,6 +3484,18 @@ extension DocumentQuerySortThenBy
     });
   }
 
+  QueryBuilder<Document, Document, QAfterSortBy> thenBySubject() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'subject', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Document, Document, QAfterSortBy> thenBySubjectDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'subject', Sort.desc);
+    });
+  }
+
   QueryBuilder<Document, Document, QAfterSortBy> thenByUpdatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'updatedAt', Sort.asc);
@@ -3464,6 +3649,13 @@ extension DocumentQueryWhereDistinct
     });
   }
 
+  QueryBuilder<Document, Document, QDistinct> distinctBySubject(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'subject', caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<Document, Document, QDistinct> distinctByUpdatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'updatedAt');
@@ -3591,6 +3783,12 @@ extension DocumentQueryProperty
   QueryBuilder<Document, DocumentStatus, QQueryOperations> statusProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'status');
+    });
+  }
+
+  QueryBuilder<Document, String?, QQueryOperations> subjectProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'subject');
     });
   }
 

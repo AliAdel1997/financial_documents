@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/document.dart';
+import '../models/organization.dart';
 import '../services/database_service.dart';
 import '../services/excel_service.dart';
 
@@ -13,7 +14,7 @@ class DocumentsProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   DocumentStatus? get statusFilter => _statusFilter;
-
+ 
   /// تحميل جميع المستندات
   Future<void> loadDocuments() async {
     _isLoading = true;
@@ -217,6 +218,31 @@ class DocumentsProvider with ChangeNotifier {
       _error = 'خطأ في تصدير ملف Excel: $e';
       notifyListeners();
       return null;
+    }
+  }
+
+  /// إنشاء قالب Excel للاستيراد
+  Future<String?> createExcelTemplate({
+    String? fileName,
+    Organization? organization,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final filePath = await ExcelService.createImportTemplate(
+        fileName: fileName,
+        organization: organization,
+      );
+
+      return filePath;
+    } catch (e) {
+      _error = 'خطأ في إنشاء قالب Excel: $e';
+      return null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 

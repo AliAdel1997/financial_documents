@@ -112,7 +112,6 @@ class _ReportsByRecipientScreenState extends State<ReportsByRecipientScreen> {
           : (_endDate ?? DateTime.now()),
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
-      locale: const Locale('ar'),
     );
 
     if (picked != null) {

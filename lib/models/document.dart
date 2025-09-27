@@ -6,9 +6,12 @@ part 'document.g.dart';
 class Document {
   Id id = Isar.autoIncrement;
 
+
+
+
   @Index(unique: true)
   int? outgoingNumber; // رقم الصادر
-
+String? subject; // الموضوع
   DateTime? documentDate; // تاريخ المستند
 
   double? amount; // المبلغ (رقماً)

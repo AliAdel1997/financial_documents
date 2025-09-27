@@ -5,6 +5,7 @@ import 'package:intl/intl.dart' as intl;
 import '../models/document.dart';
 import '../providers/documents_provider.dart';
 import '../services/database_service.dart';
+import '../services/printing_service.dart';
 
 class AddDocumentScreen extends StatefulWidget {
   final Document? document; // للتعديل
@@ -157,7 +158,6 @@ class _AddDocumentScreenState extends State<AddDocumentScreen> {
           : (_uploadDate ?? DateTime.now()),
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
-      locale: const Locale('ar'),
     );
 
     if (picked != null) {
@@ -532,33 +532,116 @@ class _AddDocumentScreenState extends State<AddDocumentScreen> {
   }
 
   Widget _buildActionButtons() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    return Column(
       children: [
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: _isLoading ? null : _saveDocument,
-            icon: const Icon(Icons.save),
-            label: Text(_isEditing ? 'حفظ التغييرات' : 'حفظ المستند'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 12),
+        // الصف الأول - أزرار الحفظ والإلغاء
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: _isLoading ? null : _saveDocument,
+                icon: const Icon(Icons.save),
+                label: Text(_isEditing ? 'حفظ التغييرات' : 'حفظ المستند'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
             ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: _isLoading ? null : () => Navigator.pop(context),
-            icon: const Icon(Icons.cancel),
-            label: const Text('إلغاء'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 12),
+            const SizedBox(width: 16),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _isLoading ? null : () => Navigator.pop(context),
+                icon: const Icon(Icons.cancel),
+                label: const Text('إلغاء'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
             ),
-          ),
+          ],
         ),
+        
+        // الصف الثاني - أزرار الطباعة (فقط للمستندات المحفوظة)
+        if (_isEditing && widget.document != null) ...[
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _isLoading ? null : _previewDocument,
+                  icon: const Icon(Icons.preview),
+                  label: const Text('معاينة'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _isLoading || widget.document!.outgoingNumber == null 
+                      ? null 
+                      : _printDocument,
+                  icon: const Icon(Icons.print),
+                  label: const Text('طباعة'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
+  }
+
+  Future<void> _previewDocument() async {
+    if (widget.document == null) return;
+    
+    try {
+      await PrintingService.previewDocument(widget.document!, context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('خطأ في المعاينة: $e')),
+      );
+    }
+  }
+
+  Future<void> _printDocument() async {
+    if (widget.document == null) return;
+
+    try {
+      final success = await PrintingService.printSingleDocument(
+        widget.document!,
+        context,
+        showPreview: true,
+        requireConfirmation: true,
+      );
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم طباعة المستند بنجاح')),
+        );
+        
+        // تحديث البيانات في الواجهة
+        if (mounted) {
+          final provider = Provider.of<DocumentsProvider>(context, listen: false);
+          await provider.loadDocuments();
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('خطأ في الطباعة: $e')),
+      );
+    }
   }
 }
