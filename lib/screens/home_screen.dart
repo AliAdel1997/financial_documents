@@ -6,8 +6,20 @@ import '../screens/add_document_screen.dart';
 import '../screens/organization_settings_screen.dart';
 import '../screens/organization_list_screen.dart';
 import '../screens/reports_by_recipient_screen.dart';
+import '../screens/funding_report_screen.dart';
+import '../screens/funding_reports_screen.dart';
+import '../screens/funding_attachment_screen.dart';
+import '../screens/internal_funding_screen.dart';
+import '../screens/funding_category_management_screen.dart';
+import '../screens/funding_allocation_screen.dart';
+import '../screens/funding_spending_screen.dart';
+import '../screens/funding_archive_screen.dart';
+import '../screens/reservation_execution_screen.dart';
 import '../models/document.dart';
+import '../models/funding_models.dart';
 import '../services/printing_service.dart';
+import '../screens/overdue_reservations_screen.dart';
+import '../services/notification_service.dart';
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -16,6 +28,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  List<FundingTransaction> _overdueReservations = [];
+  bool _showOverdueBanner = false;
+
   @override
   void initState() {
     super.initState();
@@ -46,6 +61,82 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted && !organizationProvider.hasOrganizationData) {
       await organizationProvider.createDefaultOrganization();
     }
+
+    // فحص الحجوزات المتأخرة وعرض التنبيه
+    _checkOverdueReservations();
+  }
+
+  /// فحص الحجوزات المتأخرة وعرض التنبيه
+  Future<void> _checkOverdueReservations() async {
+    try {
+      final overdueReservations = await NotificationService.getOverdueReservations();
+      if (mounted) {
+        setState(() {
+          _overdueReservations = overdueReservations;
+          _showOverdueBanner = overdueReservations.isNotEmpty;
+        });
+
+        if (overdueReservations.isNotEmpty) {
+          // عرض snackbar للتنبيه
+          NotificationService.showOverdueReservationsSnackBar(
+            context,
+            overdueReservations,
+            () => _showOverdueReservationsDialog(overdueReservations),
+          );
+        }
+      }
+    } catch (e) {
+      print('خطأ في فحص الحجوزات المتأخرة: $e');
+    }
+  }
+
+  /// عرض حوار بالحجوزات المتأخرة
+  void _showOverdueReservationsDialog(List<FundingTransaction> overdueReservations) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('حجوزات متأخرة'),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 400,
+          child: ListView.builder(
+            itemCount: overdueReservations.length,
+            itemBuilder: (context, index) {
+              final reservation = overdueReservations[index];
+              return NotificationService.buildOverdueReservationCard(
+                reservation,
+                'الباب ${reservation.categoryId}', // يمكن تحسينه للحصول على اسم الباب الفعلي
+                'المؤسسة ${reservation.institutionId}', // يمكن تحسينه للحصول على اسم المؤسسة الفعلية
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('إغلاق'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // الانتقال لشاشة إدارة الحجوزات
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const OverdueReservationsScreen(),
+                ),
+              );
+            },
+            child: Text('إدارة الحجوزات'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -73,30 +164,39 @@ class _HomeScreenState extends State<HomeScreen> {
             return _buildErrorWidget(documentsProvider.error!);
           }
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // بطاقة معلومات المؤسسة
-                _buildOrganizationCard(organizationProvider.organization),
+          return Column(
+            children: [
+              // بانر الحجوزات المتأخرة
+              if (_showOverdueBanner) _buildOverdueBanner(),
+              
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // بطاقة معلومات المؤسسة
+                      _buildOrganizationCard(organizationProvider.organization),
 
-                const SizedBox(height: 20),
+                      const SizedBox(height: 20),
 
                 // إحصائيات سريعة
                 _buildStatsCards(),
 
-                const SizedBox(height: 20),
+                      const SizedBox(height: 20),
 
-                // الأزرار الرئيسية
-                _buildMainButtons(context, documentsProvider),
+                      // الأزرار الرئيسية
+                      _buildMainButtons(context, documentsProvider),
 
-                const SizedBox(height: 20),
+                      const SizedBox(height: 20),
 
-                // قائمة المستندات الأخيرة
-                _buildRecentDocuments(documentsProvider.documents),
-              ],
-            ),
+                      // قائمة المستندات الأخيرة
+                      _buildRecentDocuments(documentsProvider.documents),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           );
         },
       ),
@@ -268,7 +368,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         const SizedBox(height: 10),
-        // زر إنشاء قالب Excel
+        // زر إنشاء قالب Excel والتقارير
         Row(
           children: [
             Expanded(
@@ -282,6 +382,194 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => FundingReportScreen()),
+                ),
+                icon: const Icon(Icons.analytics),
+                label: const Text('التقارير الهرمية'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.all(16),
+                  foregroundColor: Colors.indigo,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        // التقارير الموسعة
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => FundingReportsScreen()),
+                ),
+                icon: const Icon(Icons.assessment),
+                label: const Text('التقارير الموسعة'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.all(16),
+                  foregroundColor: Colors.deepPurple,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => FundingArchiveScreen()),
+                ),
+                icon: const Icon(Icons.archive),
+                label: const Text('أرشيف العمليات'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.all(16),
+                  foregroundColor: Colors.brown,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        // أزرار إدارة التمويل الجديدة
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => FundingCategoryManagementScreen()),
+                ),
+                icon: const Icon(Icons.category),
+                label: const Text('إدارة الأبواب'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.all(16),
+                  foregroundColor: Colors.teal,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => FundingAllocationScreen()),
+                ),
+                icon: const Icon(Icons.account_balance_wallet),
+                label: const Text('تخصيص التمويل'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.all(16),
+                  foregroundColor: Colors.blue,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        // زر إدارة الحجز والصرف المتقدمة
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => ReservationExecutionScreen()),
+                ),
+                icon: const Icon(Icons.swap_horiz),
+                label: const Text('إدارة الحجز والصرف'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.all(16),
+                  foregroundColor: Colors.purple,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => FundingSpendingScreen()),
+                ),
+                icon: const Icon(Icons.payments),
+                label: const Text('الصرف المباشر'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.all(16),
+                  foregroundColor: Colors.orange,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        // زر أرشيف العمليات
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => FundingArchiveScreen()),
+                ),
+                icon: const Icon(Icons.archive),
+                label: const Text('أرشيف العمليات'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.all(16),
+                  foregroundColor: Colors.indigo,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const OverdueReservationsScreen()),
+                ),
+                icon: const Icon(Icons.warning_amber),
+                label: const Text('الحجوزات المتأخرة'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.all(16),
+                  foregroundColor: Colors.deepOrange,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        // زر التمويل الداخلي
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => InternalFundingScreen()),
+                ),
+                icon: const Icon(Icons.account_balance),
+                label: const Text('التمويل الداخلي'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.all(16),
+                  foregroundColor: Colors.deepPurple,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(child: Container()), // مساحة فارغة
+          ],
+        ),
+        const SizedBox(height: 10),
+        // زر المرفقات
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => FundingAttachmentScreen()),
+                ),
+                icon: const Icon(Icons.attach_file),
+                label: const Text('إدارة المرفقات'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.all(16),
+                  foregroundColor: Colors.teal,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(child: Container()), // مساحة فارغة
           ],
         ),
         const SizedBox(height: 10),
@@ -695,6 +983,64 @@ class _HomeScreenState extends State<HomeScreen> {
         context,
       ).showSnackBar(SnackBar(content: Text('تم تصدير الملف: $filePath')));
     }
+  }
+
+  /// بناء بانر الحجوزات المتأخرة
+  Widget _buildOverdueBanner() {
+    return Container(
+      width: double.infinity,
+      color: Colors.orange.shade100,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Icon(
+            Icons.warning,
+            color: Colors.orange.shade800,
+            size: 24,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'تنبيه: حجوزات متأخرة',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange.shade800,
+                    fontSize: 16,
+                  ),
+                ),
+                Text(
+                  NotificationService.getOverdueMessage(_overdueReservations.length),
+                  style: TextStyle(
+                    color: Colors.orange.shade700,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton.icon(
+            onPressed: () => _showOverdueReservationsDialog(_overdueReservations),
+            icon: Icon(Icons.visibility, color: Colors.orange.shade800),
+            label: Text(
+              'عرض',
+              style: TextStyle(color: Colors.orange.shade800),
+            ),
+          ),
+          IconButton(
+            onPressed: () {
+              setState(() {
+                _showOverdueBanner = false;
+              });
+            },
+            icon: Icon(Icons.close, color: Colors.orange.shade800),
+            tooltip: 'إخفاء',
+          ),
+        ],
+      ),
+    );
   }
 }
 

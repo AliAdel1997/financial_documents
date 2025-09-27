@@ -1,0 +1,506 @@
+import '../models/funding_models.dart';
+import 'database_service.dart';
+
+/// مدير التمويل - كلاس متقدم لإدارة العمليات المالية والتوزيع الهرمي
+class FundingManager {
+  
+  /// إضافة باب تمويلي جديد (رئيسي أو فرعي)
+  /// 
+  /// [name] اسم الباب الجديد
+  /// [parentId] معرف الباب الأعلى (null للباب الرئيسي)
+  /// [allocatedAmount] المبلغ المخصص (افتراضي 0)
+  /// 
+  /// يرجع معرف الباب الجديد أو null في حالة الفشل
+  static Future<int?> addFundingCategory(
+    String name, {
+    int? parentId,
+    double allocatedAmount = 0.0,
+  }) async {
+    try {
+      // التحقق من صحة البيانات
+      if (name.trim().isEmpty) {
+        throw ArgumentError('اسم الباب لا يمكن أن يكون فارغاً');
+      }
+
+      if (allocatedAmount < 0) {
+        throw ArgumentError('المبلغ المخصص لا يمكن أن يكون سالباً');
+      }
+
+      // التحقق من وجود الباب الأعلى إذا تم تحديده
+      if (parentId != null) {
+        final parentCategory = await DatabaseService.getFundingCategoryById(parentId);
+        if (parentCategory == null) {
+          throw ArgumentError('الباب الأعلى غير موجود (ID: $parentId)');
+        }
+      }
+
+      // التحقق من عدم تكرار الاسم في نفس المستوى
+      final existingCategories = parentId == null 
+          ? await DatabaseService.getMainFundingCategories()
+          : await DatabaseService.getSubFundingCategories(parentId);
+      
+      final nameExists = existingCategories.any(
+        (category) => category.name.toLowerCase() == name.toLowerCase()
+      );
+      
+      if (nameExists) {
+        throw ArgumentError('يوجد باب بنفس الاسم في هذا المستوى');
+      }
+
+      // إنشاء الباب الجديد
+      final newCategory = FundingCategory()
+        ..name = name.trim()
+        ..parentId = parentId
+        ..allocatedAmount = allocatedAmount
+        ..createdAt = DateTime.now()
+        ..updatedAt = DateTime.now();
+
+      final categoryId = await DatabaseService.addFundingCategory(newCategory);
+
+      // إذا كان باباً فرعياً، تحديث المبلغ المخصص للباب الأعلى
+      if (parentId != null && allocatedAmount > 0) {
+        await _updateParentCategoryAllocation(parentId, allocatedAmount);
+      }
+
+      print('✅ تم إضافة الباب: $name بالمعرف: $categoryId');
+      return categoryId;
+
+    } catch (e) {
+      print('❌ خطأ في إضافة الباب: $e');
+      return null;
+    }
+  }
+
+  /// تخصيص مبلغ معين لمؤسسة ضمن باب محدد
+  /// 
+  /// [institutionId] معرف المؤسسة
+  /// [categoryId] معرف الباب التمويلي
+  /// [amount] المبلغ المراد تخصيصه
+  /// [year] السنة المالية (افتراضي السنة الحالية)
+  /// [month] الشهر المالي (افتراضي الشهر الحالي)
+  /// 
+  /// يرجع true في حالة النجاح أو false في حالة الفشل
+  static Future<bool> allocateFundsToInstitution(
+    int institutionId,
+    int categoryId,
+    double amount, {
+    int? year,
+    int? month,
+  }) async {
+    try {
+      // التحقق من صحة البيانات
+      if (amount <= 0) {
+        throw ArgumentError('المبلغ يجب أن يكون أكبر من صفر');
+      }
+
+      final currentYear = year ?? DateTime.now().year;
+      final currentMonth = month ?? DateTime.now().month;
+
+      // التحقق من وجود المؤسسة
+      final institution = await DatabaseService.getInstitutionById(institutionId);
+      if (institution == null) {
+        throw ArgumentError('المؤسسة غير موجودة (ID: $institutionId)');
+      }
+
+      // التحقق من وجود الباب التمويلي
+      final category = await DatabaseService.getFundingCategoryById(categoryId);
+      if (category == null) {
+        throw ArgumentError('الباب التمويلي غير موجود (ID: $categoryId)');
+      }
+
+      // التحقق من توفر المبلغ في الباب التمويلي
+      final totalAllocatedInCategory = await DatabaseService.getTotalAllocatedAmountForCategory(categoryId, currentYear);
+      final availableAmount = category.allocatedAmount - totalAllocatedInCategory;
+      
+      if (amount > availableAmount) {
+        throw ArgumentError(
+          'المبلغ المطلوب ($amount) يتجاوز المتاح في الباب (${availableAmount.toStringAsFixed(2)})'
+        );
+      }
+
+      // البحث عن تمويل موجود للمؤسسة في نفس الباب والفترة
+      final existingFunding = await DatabaseService.getInstitutionFundingByInstitutionAndCategory(
+        institutionId, categoryId, currentYear, currentMonth
+      );
+
+      if (existingFunding != null) {
+        // تحديث التمويل الموجود
+        final updatedFunding = existingFunding.copyWith(
+          allocatedAmount: existingFunding.allocatedAmount + amount,
+          updatedAt: DateTime.now(),
+        );
+        
+        await DatabaseService.updateInstitutionFunding(updatedFunding);
+        print('✅ تم تحديث التمويل الموجود للمؤسسة ${institution.name}');
+      } else {
+        // إنشاء تمويل جديد
+        final newFunding = InstitutionFunding()
+          ..institutionId = institutionId
+          ..categoryId = categoryId
+          ..allocatedAmount = amount
+          ..reservedAmount = 0.0
+          ..spentAmount = 0.0
+          ..year = currentYear
+          ..month = currentMonth
+          ..createdAt = DateTime.now()
+          ..updatedAt = DateTime.now();
+
+        await DatabaseService.addInstitutionFunding(newFunding);
+        print('✅ تم إنشاء تمويل جديد للمؤسسة ${institution.name}');
+      }
+
+      print('💰 تم تخصيص مبلغ ${amount.toStringAsFixed(2)} للمؤسسة ${institution.name} في الباب ${category.name}');
+      return true;
+
+    } catch (e) {
+      print('❌ خطأ في تخصيص التمويل: $e');
+      return false;
+    }
+  }
+
+  /// توزيع الأموال تلقائياً على الأبواب الفرعية
+  /// 
+  /// [categoryId] معرف الباب الرئيسي
+  /// [distributionType] نوع التوزيع (equal = بالتساوي، proportional = حسب النسبة)
+  /// [totalAmount] المبلغ الإجمالي للتوزيع (افتراضي المبلغ المخصص للباب)
+  /// 
+  /// يرجع Map يحتوي على معرف الباب الفرعي والمبلغ المخصص له
+  static Future<Map<int, double>?> distributeFundsHierarchically(
+    int categoryId, {
+    DistributionType distributionType = DistributionType.equal,
+    double? totalAmount,
+  }) async {
+    try {
+      // التحقق من وجود الباب الرئيسي
+      final parentCategory = await DatabaseService.getFundingCategoryById(categoryId);
+      if (parentCategory == null) {
+        throw ArgumentError('الباب الرئيسي غير موجود (ID: $categoryId)');
+      }
+
+      // الحصول على الأبواب الفرعية
+      final subCategories = await DatabaseService.getSubFundingCategories(categoryId);
+      if (subCategories.isEmpty) {
+        throw ArgumentError('لا يوجد أبواب فرعية للباب ${parentCategory.name}');
+      }
+
+      // تحديد المبلغ الإجمالي للتوزيع
+      final amountToDistribute = totalAmount ?? parentCategory.allocatedAmount;
+      if (amountToDistribute <= 0) {
+        throw ArgumentError('المبلغ المطلوب توزيعه يجب أن يكون أكبر من صفر');
+      }
+
+      Map<int, double> distribution = {};
+
+      switch (distributionType) {
+        case DistributionType.equal:
+          distribution = await _distributeEqually(subCategories, amountToDistribute);
+          break;
+        
+        case DistributionType.proportional:
+          distribution = await _distributeProportionally(subCategories, amountToDistribute);
+          break;
+        
+        case DistributionType.priority:
+          distribution = await _distributeByPriority(subCategories, amountToDistribute);
+          break;
+      }
+
+      // تطبيق التوزيع على قاعدة البيانات
+      await _applyDistribution(distribution);
+
+      print('✅ تم توزيع مبلغ ${amountToDistribute.toStringAsFixed(2)} على ${subCategories.length} أبواب فرعية');
+      return distribution;
+
+    } catch (e) {
+      print('❌ خطأ في التوزيع الهرمي: $e');
+      return null;
+    }
+  }
+
+  /// توزيع بالتساوي
+  static Future<Map<int, double>> _distributeEqually(
+    List<FundingCategory> subCategories,
+    double totalAmount,
+  ) async {
+    final amountPerCategory = totalAmount / subCategories.length;
+    final distribution = <int, double>{};
+
+    for (final category in subCategories) {
+      distribution[category.id] = amountPerCategory;
+    }
+
+    print('📊 التوزيع بالتساوي: ${amountPerCategory.toStringAsFixed(2)} لكل باب');
+    return distribution;
+  }
+
+  /// توزيع حسب النسبة الحالية
+  static Future<Map<int, double>> _distributeProportionally(
+    List<FundingCategory> subCategories,
+    double totalAmount,
+  ) async {
+    final distribution = <int, double>{};
+    
+    // حساب إجمالي المبالغ المخصصة حالياً
+    final totalCurrentAllocation = subCategories.fold(
+      0.0, 
+      (sum, category) => sum + category.allocatedAmount
+    );
+
+    if (totalCurrentAllocation == 0) {
+      // إذا لم تكن هناك مخصصات حالية، توزيع بالتساوي
+      return await _distributeEqually(subCategories, totalAmount);
+    }
+
+    // توزيع حسب النسبة
+    for (final category in subCategories) {
+      final proportion = category.allocatedAmount / totalCurrentAllocation;
+      distribution[category.id] = totalAmount * proportion;
+    }
+
+    print('📊 التوزيع النسبي حسب المخصصات الحالية');
+    return distribution;
+  }
+
+  /// توزيع حسب الأولوية (الأبواب ذات المخصصات الأقل تحصل على أولوية)
+  static Future<Map<int, double>> _distributeByPriority(
+    List<FundingCategory> subCategories,
+    double totalAmount,
+  ) async {
+    final distribution = <int, double>{};
+    
+    // ترتيب الأبواب حسب المخصصات (الأقل أولاً)
+    final sortedCategories = List<FundingCategory>.from(subCategories)
+      ..sort((a, b) => a.allocatedAmount.compareTo(b.allocatedAmount));
+
+    // توزيع مع إعطاء وزن أكبر للأبواب ذات المخصصات الأقل
+    final weights = <double>[];
+    
+    // حساب الأوزان (الباب الأقل مخصصاً يحصل على وزن أكبر)
+    for (int i = 0; i < sortedCategories.length; i++) {
+      weights.add(sortedCategories.length - i.toDouble());
+    }
+    
+    final totalWeight = weights.reduce((a, b) => a + b);
+    
+    for (int i = 0; i < sortedCategories.length; i++) {
+      final category = sortedCategories[i];
+      final proportion = weights[i] / totalWeight;
+      distribution[category.id] = totalAmount * proportion;
+    }
+
+    print('📊 التوزيع حسب الأولوية (الأقل مخصصاً يحصل على أكثر)');
+    return distribution;
+  }
+
+  /// تطبيق التوزيع على قاعدة البيانات
+  static Future<void> _applyDistribution(Map<int, double> distribution) async {
+    for (final entry in distribution.entries) {
+      final categoryId = entry.key;
+      final amount = entry.value;
+      
+      final category = await DatabaseService.getFundingCategoryById(categoryId);
+      if (category != null) {
+        final updatedCategory = category.copyWith(
+          allocatedAmount: amount,
+          updatedAt: DateTime.now(),
+        );
+        await DatabaseService.updateFundingCategory(updatedCategory);
+        
+        print('💰 تم تخصيص ${amount.toStringAsFixed(2)} للباب ${category.name}');
+      }
+    }
+  }
+
+  /// تحديث المبلغ المخصص للباب الأعلى
+  static Future<void> _updateParentCategoryAllocation(int parentId, double additionalAmount) async {
+    final parentCategory = await DatabaseService.getFundingCategoryById(parentId);
+    if (parentCategory != null) {
+      final updatedParent = parentCategory.copyWith(
+        allocatedAmount: parentCategory.allocatedAmount + additionalAmount,
+        updatedAt: DateTime.now(),
+      );
+      await DatabaseService.updateFundingCategory(updatedParent);
+    }
+  }
+
+  // =============================================
+  // دوال مساعدة للتقارير والتحليل
+  // =============================================
+
+  /// حساب إجمالي المخصصات لمؤسسة في سنة معينة
+  static Future<FundingSummary> getInstitutionFundingSummary(int institutionId, int year) async {
+    final fundings = await DatabaseService.getInstitutionFundingByInstitution(institutionId);
+    final yearFundings = fundings.where((f) => f.year == year).toList();
+
+    double totalAllocated = 0;
+    double totalReserved = 0;
+    double totalSpent = 0;
+    double totalRemaining = 0;
+
+    for (final funding in yearFundings) {
+      totalAllocated += funding.allocatedAmount;
+      totalReserved += funding.reservedAmount;
+      totalSpent += funding.spentAmount;
+      totalRemaining += funding.remainingAmount;
+    }
+
+    final institution = await DatabaseService.getInstitutionById(institutionId);
+    
+    return FundingSummary(
+      institutionName: institution?.name ?? 'غير معروف',
+      year: year,
+      totalAllocated: totalAllocated,
+      totalReserved: totalReserved,
+      totalSpent: totalSpent,
+      totalRemaining: totalRemaining,
+      utilizationRate: totalAllocated > 0 ? (totalSpent / totalAllocated) * 100 : 0,
+      fundingCount: yearFundings.length,
+    );
+  }
+
+  /// حساب إجمالي المخصصات لباب تمويلي في سنة معينة
+  static Future<CategoryFundingSummary> getCategoryFundingSummary(int categoryId, int year) async {
+    final fundings = await DatabaseService.getInstitutionFundingByCategory(categoryId);
+    final yearFundings = fundings.where((f) => f.year == year).toList();
+
+    double totalAllocated = 0;
+    double totalSpent = 0;
+    final institutionIds = <int>{};
+
+    for (final funding in yearFundings) {
+      totalAllocated += funding.allocatedAmount;
+      totalSpent += funding.spentAmount;
+      institutionIds.add(funding.institutionId);
+    }
+
+    final category = await DatabaseService.getFundingCategoryById(categoryId);
+    
+    return CategoryFundingSummary(
+      categoryName: category?.name ?? 'غير معروف',
+      year: year,
+      totalBudget: category?.allocatedAmount ?? 0,
+      totalAllocated: totalAllocated,
+      totalSpent: totalSpent,
+      remainingBudget: (category?.allocatedAmount ?? 0) - totalAllocated,
+      utilizationRate: totalAllocated > 0 ? (totalSpent / totalAllocated) * 100 : 0,
+      institutionCount: institutionIds.length,
+    );
+  }
+
+  /// توليد تقرير شامل للتمويل
+  static Future<void> generateComprehensiveReport({int? year}) async {
+    final reportYear = year ?? DateTime.now().year;
+    
+    print('\n📊 ═══════════════════════════════════════');
+    print('📊 تقرير التمويل الشامل للسنة $reportYear');
+    print('📊 ═══════════════════════════════════════');
+
+    // تقرير المؤسسات
+    final institutions = await DatabaseService.getAllInstitutions();
+    print('\n🏥 تقرير المؤسسات:');
+    print('─────────────────────────────────────────');
+    
+    double grandTotalAllocated = 0;
+    double grandTotalSpent = 0;
+    
+    for (final institution in institutions) {
+      final summary = await getInstitutionFundingSummary(institution.id, reportYear);
+      if (summary.totalAllocated > 0) {
+        print('🏥 ${summary.institutionName}:');
+        print('   💰 المخصص: ${summary.totalAllocated.toStringAsFixed(2)}');
+        print('   💸 المصروف: ${summary.totalSpent.toStringAsFixed(2)}');
+        print('   💵 المتبقي: ${summary.totalRemaining.toStringAsFixed(2)}');
+        print('   📈 نسبة الاستغلال: ${summary.utilizationRate.toStringAsFixed(1)}%');
+        print('   📋 عدد التمويلات: ${summary.fundingCount}');
+        print('');
+        
+        grandTotalAllocated += summary.totalAllocated;
+        grandTotalSpent += summary.totalSpent;
+      }
+    }
+
+    // تقرير الأبواب التمويلية
+    final categories = await DatabaseService.getMainFundingCategories();
+    print('\n💰 تقرير الأبواب التمويلية:');
+    print('─────────────────────────────────────────');
+    
+    for (final category in categories) {
+      final summary = await getCategoryFundingSummary(category.id, reportYear);
+      print('💰 ${summary.categoryName}:');
+      print('   🎯 الميزانية الكلية: ${summary.totalBudget.toStringAsFixed(2)}');
+      print('   💰 المخصص للمؤسسات: ${summary.totalAllocated.toStringAsFixed(2)}');
+      print('   💸 المصروف: ${summary.totalSpent.toStringAsFixed(2)}');
+      print('   💵 المتبقي من الميزانية: ${summary.remainingBudget.toStringAsFixed(2)}');
+      print('   📈 نسبة الاستغلال: ${summary.utilizationRate.toStringAsFixed(1)}%');
+      print('   🏥 عدد المؤسسات المستفيدة: ${summary.institutionCount}');
+      print('');
+    }
+
+    // الملخص العام
+    print('\n📊 الملخص العام:');
+    print('─────────────────────────────────────────');
+    print('💰 إجمالي المخصص: ${grandTotalAllocated.toStringAsFixed(2)}');
+    print('💸 إجمالي المصروف: ${grandTotalSpent.toStringAsFixed(2)}');
+    print('💵 إجمالي المتبقي: ${(grandTotalAllocated - grandTotalSpent).toStringAsFixed(2)}');
+    
+    final overallUtilization = grandTotalAllocated > 0 ? (grandTotalSpent / grandTotalAllocated) * 100 : 0;
+    print('📈 نسبة الاستغلال الإجمالية: ${overallUtilization.toStringAsFixed(1)}%');
+    print('🏥 عدد المؤسسات: ${institutions.length}');
+    print('💰 عدد الأبواب الرئيسية: ${categories.length}');
+    
+    print('\n📊 ═══════════════════════════════════════');
+  }
+}
+
+/// أنواع التوزيع المتاحة
+enum DistributionType {
+  equal,        // بالتساوي
+  proportional, // حسب النسبة الحالية
+  priority,     // حسب الأولوية
+}
+
+/// ملخص تمويل المؤسسة
+class FundingSummary {
+  final String institutionName;
+  final int year;
+  final double totalAllocated;
+  final double totalReserved;
+  final double totalSpent;
+  final double totalRemaining;
+  final double utilizationRate;
+  final int fundingCount;
+
+  FundingSummary({
+    required this.institutionName,
+    required this.year,
+    required this.totalAllocated,
+    required this.totalReserved,
+    required this.totalSpent,
+    required this.totalRemaining,
+    required this.utilizationRate,
+    required this.fundingCount,
+  });
+}
+
+/// ملخص تمويل الباب
+class CategoryFundingSummary {
+  final String categoryName;
+  final int year;
+  final double totalBudget;
+  final double totalAllocated;
+  final double totalSpent;
+  final double remainingBudget;
+  final double utilizationRate;
+  final int institutionCount;
+
+  CategoryFundingSummary({
+    required this.categoryName,
+    required this.year,
+    required this.totalBudget,
+    required this.totalAllocated,
+    required this.totalSpent,
+    required this.remainingBudget,
+    required this.utilizationRate,
+    required this.institutionCount,
+  });
+}
