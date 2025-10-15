@@ -73,13 +73,8 @@ class _FundingSpendingScreenState extends State<FundingSpendingScreen> {
 
   List<InstitutionFunding> get _filteredAllocations {
     return allocations.where((allocation) {
-      final category = categories.firstWhere(
-        (c) => c.id == allocation.categoryId,
-        orElse: () => FundingCategory()..fundingType = '',
-      );
-      
       // فلترة حسب نوع التمويل والشهر
-      if (category.fundingType != _selectedFundingType) return false;
+      if (allocation.fundingType != _selectedFundingType) return false;
       if (_selectedFundingType == 'شهري' && _selectedMonth != null && allocation.month != _selectedMonth) {
         return false;
       }
@@ -154,7 +149,7 @@ class _FundingSpendingScreenState extends State<FundingSpendingScreen> {
             : _descriptionController.text.trim()
           ..executionAttachmentPath = _selectedPdfPath
           ..year = _selectedAllocation!.year
-          ..month = _selectedAllocation!.month
+          ..month = _selectedAllocation!.month ?? 0
           ..executedAt = DateTime.now()
           ..createdAt = DateTime.now()
           ..updatedAt = DateTime.now();

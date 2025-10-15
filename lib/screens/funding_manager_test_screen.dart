@@ -1,3 +1,7 @@
+// TODO: يحتاج هذا الملف لإعادة كتابة بعد تحديث FundingManager
+// تم تعطيله مؤقتاً
+
+/*
 import 'package:flutter/material.dart';
 import '../services/funding_manager.dart';
 import '../services/funding_manager_examples.dart';
@@ -390,4 +394,4 @@ class _FundingManagerTestScreenState extends State<FundingManagerTestScreen> {
     _scrollController.dispose();
     super.dispose();
   }
-}
+}*/

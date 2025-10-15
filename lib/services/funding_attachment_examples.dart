@@ -51,7 +51,7 @@ class FundingAttachmentExamples {
     // إنشاء فئة تمويل
     final category = FundingCategory()
       ..name = 'التجهيزات الطبية'
-      ..allocatedAmount = 1000000
+      ..description = 'باب خاص بالتجهيزات والمعدات الطبية'
       ..createdAt = DateTime.now();
     
     final savedCategoryId = await DatabaseService.addFundingCategory(category);

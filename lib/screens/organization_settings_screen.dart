@@ -33,7 +33,10 @@ class _OrganizationSettingsScreenState
   @override
   void initState() {
     super.initState();
-    _loadOrganizationData();
+    // تأجيل تحميل البيانات حتى بعد انتهاء مرحلة البناء
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadOrganizationData();
+    });
   }
 
   @override

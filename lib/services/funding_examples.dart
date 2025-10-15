@@ -10,19 +10,19 @@ class FundingExamples {
     final mainCategories = [
       FundingCategory()
         ..name = 'باب الرواتب والأجور'
-        ..allocatedAmount = 1000000.0
+        ..description = 'باب خاص برواتب الموظفين والأجور'
         ..createdAt = DateTime.now()
         ..updatedAt = DateTime.now(),
       
       FundingCategory()
         ..name = 'باب المستلزمات الطبية'
-        ..allocatedAmount = 800000.0
+        ..description = 'باب خاص بالمعدات والمستلزمات الطبية'
         ..createdAt = DateTime.now()
         ..updatedAt = DateTime.now(),
       
       FundingCategory()
         ..name = 'باب الصيانة والتشغيل'
-        ..allocatedAmount = 500000.0
+        ..description = 'باب خاص بصيانة المعدات والتشغيل'
         ..createdAt = DateTime.now()
         ..updatedAt = DateTime.now(),
     ];
@@ -40,15 +40,15 @@ class FundingExamples {
     final subCategories = [
       FundingCategory()
         ..name = 'رواتب الأطباء'
+        ..description = 'باب فرعي لرواتب الأطباء'
         ..parentId = mainCategoryId
-        ..allocatedAmount = 600000.0
         ..createdAt = DateTime.now()
         ..updatedAt = DateTime.now(),
       
       FundingCategory()
         ..name = 'رواتب الممرضين'
+        ..description = 'باب فرعي لرواتب الممرضين'
         ..parentId = mainCategoryId
-        ..allocatedAmount = 400000.0
         ..createdAt = DateTime.now()
         ..updatedAt = DateTime.now(),
     ];
@@ -190,12 +190,12 @@ class FundingExamples {
     print('\n💰 الأبواب التمويلية الرئيسية:');
     final mainCategories = await DatabaseService.getMainFundingCategories();
     for (final category in mainCategories) {
-      print('- ${category.name} - المبلغ المخصص: ${category.allocatedAmount}');
+      print('- ${category.name} - الوصف: ${category.description ?? 'لا يوجد وصف'}');
       
       // عرض الأبواب الفرعية
       final subCategories = await DatabaseService.getSubFundingCategories(category.id);
       for (final subCategory in subCategories) {
-        print('  └─ ${subCategory.name} - المبلغ المخصص: ${subCategory.allocatedAmount}');
+        print('  └─ ${subCategory.name} - الوصف: ${subCategory.description ?? 'لا يوجد وصف'}');
       }
     }
     

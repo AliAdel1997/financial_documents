@@ -44,7 +44,7 @@ class FundingServiceExamples {
     // إنشاء باب تمويلي تجريبي
     final testCategory = FundingCategory()
       ..name = 'باب اختبار الخدمات'
-      ..allocatedAmount = 500000.0
+      ..description = 'باب تجريبي لاختبار الخدمات'
       ..createdAt = DateTime.now()
       ..updatedAt = DateTime.now();
 
@@ -404,7 +404,7 @@ class FundingServiceExamples {
 
     final medicalEquipment = FundingCategory()
       ..name = 'الأجهزة والمعدات الطبية'
-      ..allocatedAmount = 800000.0
+      ..description = 'باب خاص بالأجهزة والمعدات الطبية'
       ..createdAt = DateTime.now()
       ..updatedAt = DateTime.now();
 

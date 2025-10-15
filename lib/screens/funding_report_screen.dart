@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/funding_report_service.dart';
-import '../services/funding_report_examples.dart';
+// import '../services/funding_report_examples.dart'; // معطل مؤقتاً
 import '../services/database_service.dart';
 import '../models/funding_models.dart';
 
@@ -95,12 +95,13 @@ class _FundingReportScreenState extends State<FundingReportScreen> {
     });
 
     try {
-      await FundingReportExamples.runCompleteExample();
+      // TODO: إعادة تفعيل الأمثلة بعد إصلاح FundingReportExamples
+      // await FundingReportExamples.runCompleteExample();
       await _loadInstitutions(); // إعادة تحميل المؤسسات
       await _generateReport(); // إعادة توليد التقرير
-      _showSuccessSnackBar('تم تشغيل الأمثلة وتحديث البيانات');
+      _showSuccessSnackBar('تم تحديث البيانات');
     } catch (e) {
-      _showErrorSnackBar('خطأ في تشغيل الأمثلة: $e');
+      _showErrorSnackBar('خطأ في تحديث البيانات: $e');
     } finally {
       setState(() {
         _isLoading = false;

@@ -2,6 +2,10 @@ import '../services/funding_report_service.dart';
 import '../services/database_service.dart';
 import '../services/funding_manager.dart';
 import '../services/funding_service.dart';
+// TODO: يحتاج هذا الملف لإعادة كتابة بعد تحديث النماذج
+// تم تعطيله مؤقتاً
+
+/*
 import '../models/funding_models.dart';
 
 /// أمثلة عملية لاستخدام خدمة التقارير الهرمية
@@ -520,4 +524,4 @@ class FundingReportExamples {
 
     print('✅ تم إنجاز مثال المقارنة');
   }
-}
+}*/

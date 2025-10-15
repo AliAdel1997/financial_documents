@@ -17,60 +17,35 @@ const FundingCategorySchema = CollectionSchema(
   name: r'FundingCategory',
   id: 3399109164095605429,
   properties: {
-    r'allocatedAmount': PropertySchema(
-      id: 0,
-      name: r'allocatedAmount',
-      type: IsarType.double,
-    ),
     r'createdAt': PropertySchema(
-      id: 1,
+      id: 0,
       name: r'createdAt',
       type: IsarType.dateTime,
     ),
-    r'fundingPeriodText': PropertySchema(
-      id: 2,
-      name: r'fundingPeriodText',
-      type: IsarType.string,
-    ),
-    r'fundingType': PropertySchema(
-      id: 3,
-      name: r'fundingType',
+    r'description': PropertySchema(
+      id: 1,
+      name: r'description',
       type: IsarType.string,
     ),
     r'hashCode': PropertySchema(
-      id: 4,
+      id: 2,
       name: r'hashCode',
       type: IsarType.long,
     ),
-    r'month': PropertySchema(
-      id: 5,
-      name: r'month',
-      type: IsarType.long,
-    ),
-    r'monthName': PropertySchema(
-      id: 6,
-      name: r'monthName',
-      type: IsarType.string,
-    ),
     r'name': PropertySchema(
-      id: 7,
+      id: 3,
       name: r'name',
       type: IsarType.string,
     ),
     r'parentId': PropertySchema(
-      id: 8,
+      id: 4,
       name: r'parentId',
       type: IsarType.long,
     ),
     r'updatedAt': PropertySchema(
-      id: 9,
+      id: 5,
       name: r'updatedAt',
       type: IsarType.dateTime,
-    ),
-    r'year': PropertySchema(
-      id: 10,
-      name: r'year',
-      type: IsarType.long,
     )
   },
   estimateSize: _fundingCategoryEstimateSize,
@@ -91,45 +66,6 @@ const FundingCategorySchema = CollectionSchema(
           caseSensitive: true,
         )
       ],
-    ),
-    r'allocatedAmount': IndexSchema(
-      id: 6057648164276985637,
-      name: r'allocatedAmount',
-      unique: false,
-      replace: false,
-      properties: [
-        IndexPropertySchema(
-          name: r'allocatedAmount',
-          type: IndexType.value,
-          caseSensitive: false,
-        )
-      ],
-    ),
-    r'fundingType': IndexSchema(
-      id: -46661659902452467,
-      name: r'fundingType',
-      unique: false,
-      replace: false,
-      properties: [
-        IndexPropertySchema(
-          name: r'fundingType',
-          type: IndexType.hash,
-          caseSensitive: true,
-        )
-      ],
-    ),
-    r'year': IndexSchema(
-      id: -875522826430421864,
-      name: r'year',
-      unique: false,
-      replace: false,
-      properties: [
-        IndexPropertySchema(
-          name: r'year',
-          type: IndexType.value,
-          caseSensitive: false,
-        )
-      ],
     )
   },
   links: {},
@@ -146,9 +82,12 @@ int _fundingCategoryEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
-  bytesCount += 3 + object.fundingPeriodText.length * 3;
-  bytesCount += 3 + object.fundingType.length * 3;
-  bytesCount += 3 + object.monthName.length * 3;
+  {
+    final value = object.description;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.name.length * 3;
   return bytesCount;
 }
@@ -159,17 +98,12 @@ void _fundingCategorySerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeDouble(offsets[0], object.allocatedAmount);
-  writer.writeDateTime(offsets[1], object.createdAt);
-  writer.writeString(offsets[2], object.fundingPeriodText);
-  writer.writeString(offsets[3], object.fundingType);
-  writer.writeLong(offsets[4], object.hashCode);
-  writer.writeLong(offsets[5], object.month);
-  writer.writeString(offsets[6], object.monthName);
-  writer.writeString(offsets[7], object.name);
-  writer.writeLong(offsets[8], object.parentId);
-  writer.writeDateTime(offsets[9], object.updatedAt);
-  writer.writeLong(offsets[10], object.year);
+  writer.writeDateTime(offsets[0], object.createdAt);
+  writer.writeString(offsets[1], object.description);
+  writer.writeLong(offsets[2], object.hashCode);
+  writer.writeString(offsets[3], object.name);
+  writer.writeLong(offsets[4], object.parentId);
+  writer.writeDateTime(offsets[5], object.updatedAt);
 }
 
 FundingCategory _fundingCategoryDeserialize(
@@ -179,15 +113,12 @@ FundingCategory _fundingCategoryDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = FundingCategory();
-  object.allocatedAmount = reader.readDouble(offsets[0]);
-  object.createdAt = reader.readDateTimeOrNull(offsets[1]);
-  object.fundingType = reader.readString(offsets[3]);
+  object.createdAt = reader.readDateTimeOrNull(offsets[0]);
+  object.description = reader.readStringOrNull(offsets[1]);
   object.id = id;
-  object.month = reader.readLongOrNull(offsets[5]);
-  object.name = reader.readString(offsets[7]);
-  object.parentId = reader.readLongOrNull(offsets[8]);
-  object.updatedAt = reader.readDateTimeOrNull(offsets[9]);
-  object.year = reader.readLong(offsets[10]);
+  object.name = reader.readString(offsets[3]);
+  object.parentId = reader.readLongOrNull(offsets[4]);
+  object.updatedAt = reader.readDateTimeOrNull(offsets[5]);
   return object;
 }
 
@@ -199,27 +130,17 @@ P _fundingCategoryDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readDouble(offset)) as P;
-    case 1:
       return (reader.readDateTimeOrNull(offset)) as P;
+    case 1:
+      return (reader.readStringOrNull(offset)) as P;
     case 2:
-      return (reader.readString(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 3:
       return (reader.readString(offset)) as P;
     case 4:
-      return (reader.readLong(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 5:
-      return (reader.readLongOrNull(offset)) as P;
-    case 6:
-      return (reader.readString(offset)) as P;
-    case 7:
-      return (reader.readString(offset)) as P;
-    case 8:
-      return (reader.readLongOrNull(offset)) as P;
-    case 9:
       return (reader.readDateTimeOrNull(offset)) as P;
-    case 10:
-      return (reader.readLong(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -243,23 +164,6 @@ extension FundingCategoryQueryWhereSort
   QueryBuilder<FundingCategory, FundingCategory, QAfterWhere> anyId() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(const IdWhereClause.any());
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterWhere>
-      anyAllocatedAmount() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(
-        const IndexWhereClause.any(indexName: r'allocatedAmount'),
-      );
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterWhere> anyYear() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(
-        const IndexWhereClause.any(indexName: r'year'),
-      );
     });
   }
 }
@@ -378,306 +282,10 @@ extension FundingCategoryQueryWhere
       }
     });
   }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterWhereClause>
-      allocatedAmountEqualTo(double allocatedAmount) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'allocatedAmount',
-        value: [allocatedAmount],
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterWhereClause>
-      allocatedAmountNotEqualTo(double allocatedAmount) {
-    return QueryBuilder.apply(this, (query) {
-      if (query.whereSort == Sort.asc) {
-        return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'allocatedAmount',
-              lower: [],
-              upper: [allocatedAmount],
-              includeUpper: false,
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'allocatedAmount',
-              lower: [allocatedAmount],
-              includeLower: false,
-              upper: [],
-            ));
-      } else {
-        return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'allocatedAmount',
-              lower: [allocatedAmount],
-              includeLower: false,
-              upper: [],
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'allocatedAmount',
-              lower: [],
-              upper: [allocatedAmount],
-              includeUpper: false,
-            ));
-      }
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterWhereClause>
-      allocatedAmountGreaterThan(
-    double allocatedAmount, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'allocatedAmount',
-        lower: [allocatedAmount],
-        includeLower: include,
-        upper: [],
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterWhereClause>
-      allocatedAmountLessThan(
-    double allocatedAmount, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'allocatedAmount',
-        lower: [],
-        upper: [allocatedAmount],
-        includeUpper: include,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterWhereClause>
-      allocatedAmountBetween(
-    double lowerAllocatedAmount,
-    double upperAllocatedAmount, {
-    bool includeLower = true,
-    bool includeUpper = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'allocatedAmount',
-        lower: [lowerAllocatedAmount],
-        includeLower: includeLower,
-        upper: [upperAllocatedAmount],
-        includeUpper: includeUpper,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterWhereClause>
-      fundingTypeEqualTo(String fundingType) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'fundingType',
-        value: [fundingType],
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterWhereClause>
-      fundingTypeNotEqualTo(String fundingType) {
-    return QueryBuilder.apply(this, (query) {
-      if (query.whereSort == Sort.asc) {
-        return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'fundingType',
-              lower: [],
-              upper: [fundingType],
-              includeUpper: false,
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'fundingType',
-              lower: [fundingType],
-              includeLower: false,
-              upper: [],
-            ));
-      } else {
-        return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'fundingType',
-              lower: [fundingType],
-              includeLower: false,
-              upper: [],
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'fundingType',
-              lower: [],
-              upper: [fundingType],
-              includeUpper: false,
-            ));
-      }
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterWhereClause> yearEqualTo(
-      int year) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'year',
-        value: [year],
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterWhereClause>
-      yearNotEqualTo(int year) {
-    return QueryBuilder.apply(this, (query) {
-      if (query.whereSort == Sort.asc) {
-        return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'year',
-              lower: [],
-              upper: [year],
-              includeUpper: false,
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'year',
-              lower: [year],
-              includeLower: false,
-              upper: [],
-            ));
-      } else {
-        return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'year',
-              lower: [year],
-              includeLower: false,
-              upper: [],
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'year',
-              lower: [],
-              upper: [year],
-              includeUpper: false,
-            ));
-      }
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterWhereClause>
-      yearGreaterThan(
-    int year, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'year',
-        lower: [year],
-        includeLower: include,
-        upper: [],
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterWhereClause>
-      yearLessThan(
-    int year, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'year',
-        lower: [],
-        upper: [year],
-        includeUpper: include,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterWhereClause> yearBetween(
-    int lowerYear,
-    int upperYear, {
-    bool includeLower = true,
-    bool includeUpper = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'year',
-        lower: [lowerYear],
-        includeLower: includeLower,
-        upper: [upperYear],
-        includeUpper: includeUpper,
-      ));
-    });
-  }
 }
 
 extension FundingCategoryQueryFilter
     on QueryBuilder<FundingCategory, FundingCategory, QFilterCondition> {
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      allocatedAmountEqualTo(
-    double value, {
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'allocatedAmount',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      allocatedAmountGreaterThan(
-    double value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'allocatedAmount',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      allocatedAmountLessThan(
-    double value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'allocatedAmount',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      allocatedAmountBetween(
-    double lower,
-    double upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'allocatedAmount',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
   QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
       createdAtIsNull() {
     return QueryBuilder.apply(this, (query) {
@@ -753,13 +361,31 @@ extension FundingCategoryQueryFilter
   }
 
   QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      fundingPeriodTextEqualTo(
-    String value, {
+      descriptionIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'description',
+      ));
+    });
+  }
+
+  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
+      descriptionIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'description',
+      ));
+    });
+  }
+
+  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
+      descriptionEqualTo(
+    String? value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'fundingPeriodText',
+        property: r'description',
         value: value,
         caseSensitive: caseSensitive,
       ));
@@ -767,15 +393,15 @@ extension FundingCategoryQueryFilter
   }
 
   QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      fundingPeriodTextGreaterThan(
-    String value, {
+      descriptionGreaterThan(
+    String? value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         include: include,
-        property: r'fundingPeriodText',
+        property: r'description',
         value: value,
         caseSensitive: caseSensitive,
       ));
@@ -783,15 +409,15 @@ extension FundingCategoryQueryFilter
   }
 
   QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      fundingPeriodTextLessThan(
-    String value, {
+      descriptionLessThan(
+    String? value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.lessThan(
         include: include,
-        property: r'fundingPeriodText',
+        property: r'description',
         value: value,
         caseSensitive: caseSensitive,
       ));
@@ -799,16 +425,16 @@ extension FundingCategoryQueryFilter
   }
 
   QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      fundingPeriodTextBetween(
-    String lower,
-    String upper, {
+      descriptionBetween(
+    String? lower,
+    String? upper, {
     bool includeLower = true,
     bool includeUpper = true,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
-        property: r'fundingPeriodText',
+        property: r'description',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
@@ -819,13 +445,13 @@ extension FundingCategoryQueryFilter
   }
 
   QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      fundingPeriodTextStartsWith(
+      descriptionStartsWith(
     String value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'fundingPeriodText',
+        property: r'description',
         value: value,
         caseSensitive: caseSensitive,
       ));
@@ -833,13 +459,13 @@ extension FundingCategoryQueryFilter
   }
 
   QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      fundingPeriodTextEndsWith(
+      descriptionEndsWith(
     String value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'fundingPeriodText',
+        property: r'description',
         value: value,
         caseSensitive: caseSensitive,
       ));
@@ -847,10 +473,10 @@ extension FundingCategoryQueryFilter
   }
 
   QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      fundingPeriodTextContains(String value, {bool caseSensitive = true}) {
+      descriptionContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
-        property: r'fundingPeriodText',
+        property: r'description',
         value: value,
         caseSensitive: caseSensitive,
       ));
@@ -858,10 +484,10 @@ extension FundingCategoryQueryFilter
   }
 
   QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      fundingPeriodTextMatches(String pattern, {bool caseSensitive = true}) {
+      descriptionMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
-        property: r'fundingPeriodText',
+        property: r'description',
         wildcard: pattern,
         caseSensitive: caseSensitive,
       ));
@@ -869,156 +495,20 @@ extension FundingCategoryQueryFilter
   }
 
   QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      fundingPeriodTextIsEmpty() {
+      descriptionIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'fundingPeriodText',
+        property: r'description',
         value: '',
       ));
     });
   }
 
   QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      fundingPeriodTextIsNotEmpty() {
+      descriptionIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'fundingPeriodText',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      fundingTypeEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'fundingType',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      fundingTypeGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'fundingType',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      fundingTypeLessThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'fundingType',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      fundingTypeBetween(
-    String lower,
-    String upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'fundingType',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      fundingTypeStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'fundingType',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      fundingTypeEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'fundingType',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      fundingTypeContains(String value, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'fundingType',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      fundingTypeMatches(String pattern, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'fundingType',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      fundingTypeIsEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'fundingType',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      fundingTypeIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'fundingType',
+        property: r'description',
         value: '',
       ));
     });
@@ -1132,216 +622,6 @@ extension FundingCategoryQueryFilter
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      monthIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'month',
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      monthIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'month',
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      monthEqualTo(int? value) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'month',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      monthGreaterThan(
-    int? value, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'month',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      monthLessThan(
-    int? value, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'month',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      monthBetween(
-    int? lower,
-    int? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'month',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      monthNameEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'monthName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      monthNameGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'monthName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      monthNameLessThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'monthName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      monthNameBetween(
-    String lower,
-    String upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'monthName',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      monthNameStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'monthName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      monthNameEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'monthName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      monthNameContains(String value, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'monthName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      monthNameMatches(String pattern, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'monthName',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      monthNameIsEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'monthName',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      monthNameIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'monthName',
-        value: '',
       ));
     });
   }
@@ -1629,62 +909,6 @@ extension FundingCategoryQueryFilter
       ));
     });
   }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      yearEqualTo(int value) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'year',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      yearGreaterThan(
-    int value, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'year',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      yearLessThan(
-    int value, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'year',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterFilterCondition>
-      yearBetween(
-    int lower,
-    int upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'year',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
-    });
-  }
 }
 
 extension FundingCategoryQueryObject
@@ -1695,20 +919,6 @@ extension FundingCategoryQueryLinks
 
 extension FundingCategoryQuerySortBy
     on QueryBuilder<FundingCategory, FundingCategory, QSortBy> {
-  QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy>
-      sortByAllocatedAmount() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'allocatedAmount', Sort.asc);
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy>
-      sortByAllocatedAmountDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'allocatedAmount', Sort.desc);
-    });
-  }
-
   QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy>
       sortByCreatedAt() {
     return QueryBuilder.apply(this, (query) {
@@ -1724,30 +934,16 @@ extension FundingCategoryQuerySortBy
   }
 
   QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy>
-      sortByFundingPeriodText() {
+      sortByDescription() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'fundingPeriodText', Sort.asc);
+      return query.addSortBy(r'description', Sort.asc);
     });
   }
 
   QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy>
-      sortByFundingPeriodTextDesc() {
+      sortByDescriptionDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'fundingPeriodText', Sort.desc);
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy>
-      sortByFundingType() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'fundingType', Sort.asc);
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy>
-      sortByFundingTypeDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'fundingType', Sort.desc);
+      return query.addSortBy(r'description', Sort.desc);
     });
   }
 
@@ -1762,33 +958,6 @@ extension FundingCategoryQuerySortBy
       sortByHashCodeDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'hashCode', Sort.desc);
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy> sortByMonth() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'month', Sort.asc);
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy>
-      sortByMonthDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'month', Sort.desc);
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy>
-      sortByMonthName() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'monthName', Sort.asc);
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy>
-      sortByMonthNameDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'monthName', Sort.desc);
     });
   }
 
@@ -1832,37 +1001,10 @@ extension FundingCategoryQuerySortBy
       return query.addSortBy(r'updatedAt', Sort.desc);
     });
   }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy> sortByYear() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'year', Sort.asc);
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy>
-      sortByYearDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'year', Sort.desc);
-    });
-  }
 }
 
 extension FundingCategoryQuerySortThenBy
     on QueryBuilder<FundingCategory, FundingCategory, QSortThenBy> {
-  QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy>
-      thenByAllocatedAmount() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'allocatedAmount', Sort.asc);
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy>
-      thenByAllocatedAmountDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'allocatedAmount', Sort.desc);
-    });
-  }
-
   QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy>
       thenByCreatedAt() {
     return QueryBuilder.apply(this, (query) {
@@ -1878,30 +1020,16 @@ extension FundingCategoryQuerySortThenBy
   }
 
   QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy>
-      thenByFundingPeriodText() {
+      thenByDescription() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'fundingPeriodText', Sort.asc);
+      return query.addSortBy(r'description', Sort.asc);
     });
   }
 
   QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy>
-      thenByFundingPeriodTextDesc() {
+      thenByDescriptionDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'fundingPeriodText', Sort.desc);
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy>
-      thenByFundingType() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'fundingType', Sort.asc);
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy>
-      thenByFundingTypeDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'fundingType', Sort.desc);
+      return query.addSortBy(r'description', Sort.desc);
     });
   }
 
@@ -1928,33 +1056,6 @@ extension FundingCategoryQuerySortThenBy
   QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy> thenByIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.desc);
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy> thenByMonth() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'month', Sort.asc);
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy>
-      thenByMonthDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'month', Sort.desc);
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy>
-      thenByMonthName() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'monthName', Sort.asc);
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy>
-      thenByMonthNameDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'monthName', Sort.desc);
     });
   }
 
@@ -1998,30 +1099,10 @@ extension FundingCategoryQuerySortThenBy
       return query.addSortBy(r'updatedAt', Sort.desc);
     });
   }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy> thenByYear() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'year', Sort.asc);
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QAfterSortBy>
-      thenByYearDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'year', Sort.desc);
-    });
-  }
 }
 
 extension FundingCategoryQueryWhereDistinct
     on QueryBuilder<FundingCategory, FundingCategory, QDistinct> {
-  QueryBuilder<FundingCategory, FundingCategory, QDistinct>
-      distinctByAllocatedAmount() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'allocatedAmount');
-    });
-  }
-
   QueryBuilder<FundingCategory, FundingCategory, QDistinct>
       distinctByCreatedAt() {
     return QueryBuilder.apply(this, (query) {
@@ -2030,17 +1111,9 @@ extension FundingCategoryQueryWhereDistinct
   }
 
   QueryBuilder<FundingCategory, FundingCategory, QDistinct>
-      distinctByFundingPeriodText({bool caseSensitive = true}) {
+      distinctByDescription({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'fundingPeriodText',
-          caseSensitive: caseSensitive);
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QDistinct>
-      distinctByFundingType({bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'fundingType', caseSensitive: caseSensitive);
+      return query.addDistinctBy(r'description', caseSensitive: caseSensitive);
     });
   }
 
@@ -2048,19 +1121,6 @@ extension FundingCategoryQueryWhereDistinct
       distinctByHashCode() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'hashCode');
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QDistinct> distinctByMonth() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'month');
-    });
-  }
-
-  QueryBuilder<FundingCategory, FundingCategory, QDistinct> distinctByMonthName(
-      {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'monthName', caseSensitive: caseSensitive);
     });
   }
 
@@ -2084,12 +1144,6 @@ extension FundingCategoryQueryWhereDistinct
       return query.addDistinctBy(r'updatedAt');
     });
   }
-
-  QueryBuilder<FundingCategory, FundingCategory, QDistinct> distinctByYear() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'year');
-    });
-  }
 }
 
 extension FundingCategoryQueryProperty
@@ -2100,13 +1154,6 @@ extension FundingCategoryQueryProperty
     });
   }
 
-  QueryBuilder<FundingCategory, double, QQueryOperations>
-      allocatedAmountProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'allocatedAmount');
-    });
-  }
-
   QueryBuilder<FundingCategory, DateTime?, QQueryOperations>
       createdAtProperty() {
     return QueryBuilder.apply(this, (query) {
@@ -2114,35 +1161,16 @@ extension FundingCategoryQueryProperty
     });
   }
 
-  QueryBuilder<FundingCategory, String, QQueryOperations>
-      fundingPeriodTextProperty() {
+  QueryBuilder<FundingCategory, String?, QQueryOperations>
+      descriptionProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'fundingPeriodText');
-    });
-  }
-
-  QueryBuilder<FundingCategory, String, QQueryOperations>
-      fundingTypeProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'fundingType');
+      return query.addPropertyName(r'description');
     });
   }
 
   QueryBuilder<FundingCategory, int, QQueryOperations> hashCodeProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'hashCode');
-    });
-  }
-
-  QueryBuilder<FundingCategory, int?, QQueryOperations> monthProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'month');
-    });
-  }
-
-  QueryBuilder<FundingCategory, String, QQueryOperations> monthNameProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'monthName');
     });
   }
 
@@ -2162,12 +1190,6 @@ extension FundingCategoryQueryProperty
       updatedAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'updatedAt');
-    });
-  }
-
-  QueryBuilder<FundingCategory, int, QQueryOperations> yearProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'year');
     });
   }
 }
@@ -3271,43 +2293,58 @@ const InstitutionFundingSchema = CollectionSchema(
       name: r'executionAttachmentPath',
       type: IsarType.string,
     ),
-    r'hashCode': PropertySchema(
+    r'fundingPeriodText': PropertySchema(
       id: 4,
+      name: r'fundingPeriodText',
+      type: IsarType.string,
+    ),
+    r'fundingType': PropertySchema(
+      id: 5,
+      name: r'fundingType',
+      type: IsarType.string,
+    ),
+    r'hashCode': PropertySchema(
+      id: 6,
       name: r'hashCode',
       type: IsarType.long,
     ),
     r'institutionId': PropertySchema(
-      id: 5,
+      id: 7,
       name: r'institutionId',
       type: IsarType.long,
     ),
     r'month': PropertySchema(
-      id: 6,
+      id: 8,
       name: r'month',
       type: IsarType.long,
     ),
+    r'monthName': PropertySchema(
+      id: 9,
+      name: r'monthName',
+      type: IsarType.string,
+    ),
     r'remainingAmount': PropertySchema(
-      id: 7,
+      id: 10,
       name: r'remainingAmount',
       type: IsarType.double,
     ),
     r'reservedAmount': PropertySchema(
-      id: 8,
+      id: 11,
       name: r'reservedAmount',
       type: IsarType.double,
     ),
     r'spentAmount': PropertySchema(
-      id: 9,
+      id: 12,
       name: r'spentAmount',
       type: IsarType.double,
     ),
     r'updatedAt': PropertySchema(
-      id: 10,
+      id: 13,
       name: r'updatedAt',
       type: IsarType.dateTime,
     ),
     r'year': PropertySchema(
-      id: 11,
+      id: 14,
       name: r'year',
       type: IsarType.long,
     )
@@ -3344,6 +2381,19 @@ const InstitutionFundingSchema = CollectionSchema(
         )
       ],
     ),
+    r'fundingType': IndexSchema(
+      id: -46661659902452467,
+      name: r'fundingType',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'fundingType',
+          type: IndexType.hash,
+          caseSensitive: true,
+        )
+      ],
+    ),
     r'year': IndexSchema(
       id: -875522826430421864,
       name: r'year',
@@ -3352,19 +2402,6 @@ const InstitutionFundingSchema = CollectionSchema(
       properties: [
         IndexPropertySchema(
           name: r'year',
-          type: IndexType.value,
-          caseSensitive: false,
-        )
-      ],
-    ),
-    r'month': IndexSchema(
-      id: -3594385961712742690,
-      name: r'month',
-      unique: false,
-      replace: false,
-      properties: [
-        IndexPropertySchema(
-          name: r'month',
           type: IndexType.value,
           caseSensitive: false,
         )
@@ -3391,6 +2428,9 @@ int _institutionFundingEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
+  bytesCount += 3 + object.fundingPeriodText.length * 3;
+  bytesCount += 3 + object.fundingType.length * 3;
+  bytesCount += 3 + object.monthName.length * 3;
   return bytesCount;
 }
 
@@ -3404,14 +2444,17 @@ void _institutionFundingSerialize(
   writer.writeLong(offsets[1], object.categoryId);
   writer.writeDateTime(offsets[2], object.createdAt);
   writer.writeString(offsets[3], object.executionAttachmentPath);
-  writer.writeLong(offsets[4], object.hashCode);
-  writer.writeLong(offsets[5], object.institutionId);
-  writer.writeLong(offsets[6], object.month);
-  writer.writeDouble(offsets[7], object.remainingAmount);
-  writer.writeDouble(offsets[8], object.reservedAmount);
-  writer.writeDouble(offsets[9], object.spentAmount);
-  writer.writeDateTime(offsets[10], object.updatedAt);
-  writer.writeLong(offsets[11], object.year);
+  writer.writeString(offsets[4], object.fundingPeriodText);
+  writer.writeString(offsets[5], object.fundingType);
+  writer.writeLong(offsets[6], object.hashCode);
+  writer.writeLong(offsets[7], object.institutionId);
+  writer.writeLong(offsets[8], object.month);
+  writer.writeString(offsets[9], object.monthName);
+  writer.writeDouble(offsets[10], object.remainingAmount);
+  writer.writeDouble(offsets[11], object.reservedAmount);
+  writer.writeDouble(offsets[12], object.spentAmount);
+  writer.writeDateTime(offsets[13], object.updatedAt);
+  writer.writeLong(offsets[14], object.year);
 }
 
 InstitutionFunding _institutionFundingDeserialize(
@@ -3425,13 +2468,14 @@ InstitutionFunding _institutionFundingDeserialize(
   object.categoryId = reader.readLong(offsets[1]);
   object.createdAt = reader.readDateTimeOrNull(offsets[2]);
   object.executionAttachmentPath = reader.readStringOrNull(offsets[3]);
+  object.fundingType = reader.readString(offsets[5]);
   object.id = id;
-  object.institutionId = reader.readLong(offsets[5]);
-  object.month = reader.readLong(offsets[6]);
-  object.reservedAmount = reader.readDouble(offsets[8]);
-  object.spentAmount = reader.readDouble(offsets[9]);
-  object.updatedAt = reader.readDateTimeOrNull(offsets[10]);
-  object.year = reader.readLong(offsets[11]);
+  object.institutionId = reader.readLong(offsets[7]);
+  object.month = reader.readLongOrNull(offsets[8]);
+  object.reservedAmount = reader.readDouble(offsets[11]);
+  object.spentAmount = reader.readDouble(offsets[12]);
+  object.updatedAt = reader.readDateTimeOrNull(offsets[13]);
+  object.year = reader.readLong(offsets[14]);
   return object;
 }
 
@@ -3451,20 +2495,26 @@ P _institutionFundingDeserializeProp<P>(
     case 3:
       return (reader.readStringOrNull(offset)) as P;
     case 4:
-      return (reader.readLong(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 5:
-      return (reader.readLong(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 6:
       return (reader.readLong(offset)) as P;
     case 7:
-      return (reader.readDouble(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 8:
-      return (reader.readDouble(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 9:
-      return (reader.readDouble(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 10:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readDouble(offset)) as P;
     case 11:
+      return (reader.readDouble(offset)) as P;
+    case 12:
+      return (reader.readDouble(offset)) as P;
+    case 13:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 14:
       return (reader.readLong(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -3515,14 +2565,6 @@ extension InstitutionFundingQueryWhereSort
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         const IndexWhereClause.any(indexName: r'year'),
-      );
-    });
-  }
-
-  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterWhere> anyMonth() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(
-        const IndexWhereClause.any(indexName: r'month'),
       );
     });
   }
@@ -3785,6 +2827,51 @@ extension InstitutionFundingQueryWhere
   }
 
   QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterWhereClause>
+      fundingTypeEqualTo(String fundingType) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'fundingType',
+        value: [fundingType],
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterWhereClause>
+      fundingTypeNotEqualTo(String fundingType) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'fundingType',
+              lower: [],
+              upper: [fundingType],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'fundingType',
+              lower: [fundingType],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'fundingType',
+              lower: [fundingType],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'fundingType',
+              lower: [],
+              upper: [fundingType],
+              includeUpper: false,
+            ));
+      }
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterWhereClause>
       yearEqualTo(int year) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
@@ -3872,99 +2959,6 @@ extension InstitutionFundingQueryWhere
         lower: [lowerYear],
         includeLower: includeLower,
         upper: [upperYear],
-        includeUpper: includeUpper,
-      ));
-    });
-  }
-
-  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterWhereClause>
-      monthEqualTo(int month) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'month',
-        value: [month],
-      ));
-    });
-  }
-
-  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterWhereClause>
-      monthNotEqualTo(int month) {
-    return QueryBuilder.apply(this, (query) {
-      if (query.whereSort == Sort.asc) {
-        return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'month',
-              lower: [],
-              upper: [month],
-              includeUpper: false,
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'month',
-              lower: [month],
-              includeLower: false,
-              upper: [],
-            ));
-      } else {
-        return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'month',
-              lower: [month],
-              includeLower: false,
-              upper: [],
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'month',
-              lower: [],
-              upper: [month],
-              includeUpper: false,
-            ));
-      }
-    });
-  }
-
-  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterWhereClause>
-      monthGreaterThan(
-    int month, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'month',
-        lower: [month],
-        includeLower: include,
-        upper: [],
-      ));
-    });
-  }
-
-  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterWhereClause>
-      monthLessThan(
-    int month, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'month',
-        lower: [],
-        upper: [month],
-        includeUpper: include,
-      ));
-    });
-  }
-
-  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterWhereClause>
-      monthBetween(
-    int lowerMonth,
-    int upperMonth, {
-    bool includeLower = true,
-    bool includeUpper = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'month',
-        lower: [lowerMonth],
-        includeLower: includeLower,
-        upper: [upperMonth],
         includeUpper: includeUpper,
       ));
     });
@@ -4326,6 +3320,278 @@ extension InstitutionFundingQueryFilter
   }
 
   QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      fundingPeriodTextEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'fundingPeriodText',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      fundingPeriodTextGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'fundingPeriodText',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      fundingPeriodTextLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'fundingPeriodText',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      fundingPeriodTextBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'fundingPeriodText',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      fundingPeriodTextStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'fundingPeriodText',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      fundingPeriodTextEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'fundingPeriodText',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      fundingPeriodTextContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'fundingPeriodText',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      fundingPeriodTextMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'fundingPeriodText',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      fundingPeriodTextIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'fundingPeriodText',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      fundingPeriodTextIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'fundingPeriodText',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      fundingTypeEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'fundingType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      fundingTypeGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'fundingType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      fundingTypeLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'fundingType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      fundingTypeBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'fundingType',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      fundingTypeStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'fundingType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      fundingTypeEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'fundingType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      fundingTypeContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'fundingType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      fundingTypeMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'fundingType',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      fundingTypeIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'fundingType',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      fundingTypeIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'fundingType',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
       hashCodeEqualTo(int value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -4494,7 +3760,25 @@ extension InstitutionFundingQueryFilter
   }
 
   QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
-      monthEqualTo(int value) {
+      monthIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'month',
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      monthIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'month',
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      monthEqualTo(int? value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'month',
@@ -4505,7 +3789,7 @@ extension InstitutionFundingQueryFilter
 
   QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
       monthGreaterThan(
-    int value, {
+    int? value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -4519,7 +3803,7 @@ extension InstitutionFundingQueryFilter
 
   QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
       monthLessThan(
-    int value, {
+    int? value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -4533,8 +3817,8 @@ extension InstitutionFundingQueryFilter
 
   QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
       monthBetween(
-    int lower,
-    int upper, {
+    int? lower,
+    int? upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
@@ -4545,6 +3829,142 @@ extension InstitutionFundingQueryFilter
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      monthNameEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'monthName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      monthNameGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'monthName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      monthNameLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'monthName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      monthNameBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'monthName',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      monthNameStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'monthName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      monthNameEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'monthName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      monthNameContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'monthName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      monthNameMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'monthName',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      monthNameIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'monthName',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterFilterCondition>
+      monthNameIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'monthName',
+        value: '',
       ));
     });
   }
@@ -4943,6 +4363,34 @@ extension InstitutionFundingQuerySortBy
   }
 
   QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterSortBy>
+      sortByFundingPeriodText() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'fundingPeriodText', Sort.asc);
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterSortBy>
+      sortByFundingPeriodTextDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'fundingPeriodText', Sort.desc);
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterSortBy>
+      sortByFundingType() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'fundingType', Sort.asc);
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterSortBy>
+      sortByFundingTypeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'fundingType', Sort.desc);
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterSortBy>
       sortByHashCode() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'hashCode', Sort.asc);
@@ -4981,6 +4429,20 @@ extension InstitutionFundingQuerySortBy
       sortByMonthDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'month', Sort.desc);
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterSortBy>
+      sortByMonthName() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'monthName', Sort.asc);
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterSortBy>
+      sortByMonthNameDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'monthName', Sort.desc);
     });
   }
 
@@ -5114,6 +4576,34 @@ extension InstitutionFundingQuerySortThenBy
   }
 
   QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterSortBy>
+      thenByFundingPeriodText() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'fundingPeriodText', Sort.asc);
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterSortBy>
+      thenByFundingPeriodTextDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'fundingPeriodText', Sort.desc);
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterSortBy>
+      thenByFundingType() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'fundingType', Sort.asc);
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterSortBy>
+      thenByFundingTypeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'fundingType', Sort.desc);
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterSortBy>
       thenByHashCode() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'hashCode', Sort.asc);
@@ -5166,6 +4656,20 @@ extension InstitutionFundingQuerySortThenBy
       thenByMonthDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'month', Sort.desc);
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterSortBy>
+      thenByMonthName() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'monthName', Sort.asc);
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QAfterSortBy>
+      thenByMonthNameDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'monthName', Sort.desc);
     });
   }
 
@@ -5272,6 +4776,21 @@ extension InstitutionFundingQueryWhereDistinct
   }
 
   QueryBuilder<InstitutionFunding, InstitutionFunding, QDistinct>
+      distinctByFundingPeriodText({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'fundingPeriodText',
+          caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QDistinct>
+      distinctByFundingType({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'fundingType', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QDistinct>
       distinctByHashCode() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'hashCode');
@@ -5289,6 +4808,13 @@ extension InstitutionFundingQueryWhereDistinct
       distinctByMonth() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'month');
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, InstitutionFunding, QDistinct>
+      distinctByMonthName({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'monthName', caseSensitive: caseSensitive);
     });
   }
 
@@ -5363,6 +4889,20 @@ extension InstitutionFundingQueryProperty
     });
   }
 
+  QueryBuilder<InstitutionFunding, String, QQueryOperations>
+      fundingPeriodTextProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'fundingPeriodText');
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, String, QQueryOperations>
+      fundingTypeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'fundingType');
+    });
+  }
+
   QueryBuilder<InstitutionFunding, int, QQueryOperations> hashCodeProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'hashCode');
@@ -5376,9 +4916,16 @@ extension InstitutionFundingQueryProperty
     });
   }
 
-  QueryBuilder<InstitutionFunding, int, QQueryOperations> monthProperty() {
+  QueryBuilder<InstitutionFunding, int?, QQueryOperations> monthProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'month');
+    });
+  }
+
+  QueryBuilder<InstitutionFunding, String, QQueryOperations>
+      monthNameProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'monthName');
     });
   }
 

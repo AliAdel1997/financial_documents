@@ -10,6 +10,7 @@ class FundingCategoryManagementScreen extends StatefulWidget {
 
 class _FundingCategoryManagementScreenState extends State<FundingCategoryManagementScreen> {
   List<FundingCategory> categories = [];
+  bool isLoading = true;
 
   @override
   void initState() {
@@ -18,41 +19,170 @@ class _FundingCategoryManagementScreenState extends State<FundingCategoryManagem
   }
 
   Future<void> _loadCategories() async {
+    setState(() => isLoading = true);
     try {
-      final loadedCategories = await DatabaseService.isar.fundingCategorys.where().findAll();
-      setState(() {
-        categories = loadedCategories;
-      });
+      categories = await DatabaseService.getAllFundingCategories();
     } catch (e) {
-      print('خطأ في تحميل الأبواب: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ في تحميل الأبواب')),
-      );
+      print('خطأ في تحميل الفئات: $e');
     }
+    setState(() => isLoading = false);
   }
 
-  Future<void> _showAddCategoryDialog() async {
-    await _showCategoryDialog();
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('إدارة الأبواب المالية'),
+        backgroundColor: Colors.teal,
+        foregroundColor: Colors.white,
+      ),
+      body: isLoading
+          ? Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'إدارة الأبواب المالية',
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: () => _showCategoryDialog(),
+                        icon: Icon(Icons.add),
+                        label: Text('إضافة باب جديد'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: categories.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.folder_off, size: 80, color: Colors.grey),
+                              SizedBox(height: 16),
+                              Text('لا توجد أبواب مالية', style: TextStyle(fontSize: 18, color: Colors.grey)),
+                              SizedBox(height: 8),
+                              Text('اضغط على "إضافة باب جديد" لإنشاء أول باب مالي'),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: categories.length,
+                          itemBuilder: (context, index) {
+                            final category = categories[index];
+                            return _buildCategoryCard(category);
+                          },
+                        ),
+                ),
+              ],
+            ),
+    );
   }
 
-  Future<void> _showEditCategoryDialog(FundingCategory category) async {
-    await _showCategoryDialog(category: category);
+  Widget _buildCategoryCard(FundingCategory category) {
+    final isRootCategory = category.parentId == null;
+    final children = categories.where((c) => c.parentId == category.id).toList();
+    
+    return Card(
+      margin: EdgeInsets.only(bottom: 8),
+      child: ExpansionTile(
+        leading: Icon(
+          isRootCategory ? Icons.folder : Icons.subdirectory_arrow_right,
+          color: isRootCategory ? Colors.blue : Colors.green,
+        ),
+        title: Text(
+          category.name,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: isRootCategory ? 16 : 14,
+          ),
+        ),
+        subtitle: category.description != null 
+            ? Text(category.description!, style: TextStyle(color: Colors.grey[600]))
+            : null,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (children.isNotEmpty)
+              Chip(
+                label: Text('${children.length}'),
+                backgroundColor: Colors.blue[100],
+                labelStyle: TextStyle(fontSize: 12),
+              ),
+            SizedBox(width: 8),
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                switch (value) {
+                  case 'edit':
+                    _showCategoryDialog(category: category);
+                    break;
+                  case 'delete':
+                    _deleteCategory(category);
+                    break;
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit), SizedBox(width: 8), Text('تعديل')])),
+                PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete), SizedBox(width: 8), Text('حذف')])),
+              ],
+            ),
+          ],
+        ),
+        children: children.map((child) => _buildSubCategoryTile(child)).toList(),
+      ),
+    );
+  }
+
+  Widget _buildSubCategoryTile(FundingCategory category) {
+    return ListTile(
+      leading: Icon(Icons.label, color: Colors.orange, size: 20),
+      title: Text(category.name),
+      subtitle: category.description != null 
+          ? Text(category.description!, style: TextStyle(color: Colors.grey[600]))
+          : null,
+      trailing: PopupMenuButton<String>(
+        onSelected: (value) {
+          switch (value) {
+            case 'edit':
+              _showCategoryDialog(category: category);
+              break;
+            case 'delete':
+              _deleteCategory(category);
+              break;
+          }
+        },
+        itemBuilder: (context) => [
+          PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit), SizedBox(width: 8), Text('تعديل')])),
+          PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete), SizedBox(width: 8), Text('حذف')])),
+        ],
+      ),
+    );
   }
 
   Future<void> _showCategoryDialog({FundingCategory? category}) async {
     final isEditing = category != null;
     final nameController = TextEditingController(text: category?.name ?? '');
+    final descriptionController = TextEditingController(text: category?.description ?? '');
     FundingCategory? selectedParent;
-    String selectedFundingType = category?.fundingType ?? 'سنوي';
-    int selectedYear = category?.year ?? DateTime.now().year;
-    int? selectedMonth = category?.month;
 
     // للتعديل، البحث عن الباب الأب
     if (isEditing && category.parentId != null) {
       selectedParent = categories.firstWhere(
         (c) => c.id == category.parentId,
-        orElse: () => FundingCategory()..name = 'غير موجود',
+        orElse: () => FundingCategory(),
       );
+      if (selectedParent.id == 0) selectedParent = null;
     }
 
     await showDialog(
@@ -67,9 +197,18 @@ class _FundingCategoryManagementScreenState extends State<FundingCategoryManagem
                 TextField(
                   controller: nameController,
                   decoration: InputDecoration(
-                    labelText: 'اسم الباب',
+                    labelText: 'اسم الباب *',
                     border: OutlineInputBorder(),
                   ),
+                ),
+                SizedBox(height: 16),
+                TextField(
+                  controller: descriptionController,
+                  decoration: InputDecoration(
+                    labelText: 'وصف الباب (اختياري)',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 2,
                 ),
                 SizedBox(height: 16),
                 DropdownButtonFormField<FundingCategory?>(
@@ -96,69 +235,6 @@ class _FundingCategoryManagementScreenState extends State<FundingCategoryManagem
                     });
                   },
                 ),
-                SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: selectedFundingType,
-                  decoration: InputDecoration(
-                    labelText: 'نوع التمويل',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: ['سنوي', 'شهري'].map((type) => DropdownMenuItem(
-                    value: type,
-                    child: Text(type),
-                  )).toList(),
-                  onChanged: (value) {
-                    setDialogState(() {
-                      selectedFundingType = value!;
-                      if (value == 'سنوي') selectedMonth = null;
-                    });
-                  },
-                ),
-                SizedBox(height: 16),
-                DropdownButtonFormField<int>(
-                  value: selectedYear,
-                  decoration: InputDecoration(
-                    labelText: 'السنة',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: List.generate(10, (index) {
-                    final year = DateTime.now().year - 5 + index;
-                    return DropdownMenuItem(
-                      value: year,
-                      child: Text(year.toString()),
-                    );
-                  }),
-                  onChanged: (value) {
-                    setDialogState(() {
-                      selectedYear = value!;
-                    });
-                  },
-                ),
-                SizedBox(height: 16),
-                if (selectedFundingType == 'شهري')
-                  DropdownButtonFormField<int>(
-                    value: selectedMonth,
-                    decoration: InputDecoration(
-                      labelText: 'الشهر',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: List.generate(12, (index) {
-                      final month = index + 1;
-                      const monthNames = [
-                        'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-                        'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
-                      ];
-                      return DropdownMenuItem(
-                        value: month,
-                        child: Text(monthNames[index]),
-                      );
-                    }),
-                    onChanged: (value) {
-                      setDialogState(() {
-                        selectedMonth = value;
-                      });
-                    },
-                  ),
               ],
             ),
           ),
@@ -178,13 +254,13 @@ class _FundingCategoryManagementScreenState extends State<FundingCategoryManagem
 
                 try {
                   if (isEditing) {
-                    // تعديل الباب
+                    // تعديل الباب الموجود
                     final updatedCategory = category.copyWith(
                       name: nameController.text.trim(),
+                      description: descriptionController.text.trim().isEmpty 
+                          ? null 
+                          : descriptionController.text.trim(),
                       parentId: selectedParent?.id,
-                      fundingType: selectedFundingType,
-                      year: selectedYear,
-                      month: selectedMonth,
                       updatedAt: DateTime.now(),
                     );
 
@@ -195,11 +271,10 @@ class _FundingCategoryManagementScreenState extends State<FundingCategoryManagem
                     // إضافة باب جديد
                     final newCategory = FundingCategory()
                       ..name = nameController.text.trim()
+                      ..description = descriptionController.text.trim().isEmpty 
+                          ? null 
+                          : descriptionController.text.trim()
                       ..parentId = selectedParent?.id
-                      ..fundingType = selectedFundingType
-                      ..year = selectedYear
-                      ..month = selectedMonth
-                      ..allocatedAmount = 0
                       ..createdAt = DateTime.now()
                       ..updatedAt = DateTime.now();
 
@@ -232,12 +307,12 @@ class _FundingCategoryManagementScreenState extends State<FundingCategoryManagem
   Future<void> _deleteCategory(FundingCategory category) async {
     // التحقق من وجود تمويل مرتبط بهذا الباب
     try {
-      final linkedFunding = await DatabaseService.isar.institutionFundings
+      final linkedFundings = await DatabaseService.isar.institutionFundings
           .filter()
           .categoryIdEqualTo(category.id)
-          .findFirst();
+          .findAll();
 
-      if (linkedFunding != null) {
+      if (linkedFundings.isNotEmpty) {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
@@ -255,12 +330,8 @@ class _FundingCategoryManagementScreenState extends State<FundingCategoryManagem
       }
 
       // التحقق من وجود أبواب فرعية
-      final subCategories = await DatabaseService.isar.fundingCategorys
-          .filter()
-          .parentIdEqualTo(category.id)
-          .findAll();
-
-      if (subCategories.isNotEmpty) {
+      final children = categories.where((c) => c.parentId == category.id).toList();
+      if (children.isNotEmpty) {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
@@ -277,7 +348,7 @@ class _FundingCategoryManagementScreenState extends State<FundingCategoryManagem
         return;
       }
 
-      // إظهار تأكيد الحذف
+      // تأكيد الحذف
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -288,10 +359,10 @@ class _FundingCategoryManagementScreenState extends State<FundingCategoryManagem
               onPressed: () => Navigator.of(context).pop(false),
               child: Text('إلغاء'),
             ),
-            TextButton(
+            ElevatedButton(
               onPressed: () => Navigator.of(context).pop(true),
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: Text('حذف'),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: Text('حذف', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -303,7 +374,6 @@ class _FundingCategoryManagementScreenState extends State<FundingCategoryManagem
         });
 
         await _loadCategories();
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('تم حذف الباب بنجاح')),
         );
@@ -314,84 +384,5 @@ class _FundingCategoryManagementScreenState extends State<FundingCategoryManagem
         SnackBar(content: Text('خطأ في حذف الباب')),
       );
     }
-  }
-
-  String _getParentName(int? parentId) {
-    if (parentId == null) return 'باب رئيسي';
-    final parent = categories.firstWhere(
-      (c) => c.id == parentId,
-      orElse: () => FundingCategory()..name = 'غير معروف',
-    );
-    return parent.name;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('إدارة الأبواب'),
-        backgroundColor: Colors.teal,
-        foregroundColor: Colors.white,
-      ),
-      body: categories.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.folder_open, size: 80, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text('لا توجد أبواب محددة', style: TextStyle(fontSize: 18, color: Colors.grey)),
-                  SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: _showAddCategoryDialog,
-                    icon: Icon(Icons.add),
-                    label: Text('إضافة أول باب'),
-                  ),
-                ],
-              ),
-            )
-          : ListView.builder(
-              itemCount: categories.length,
-              itemBuilder: (context, index) {
-                final category = categories[index];
-                return Card(
-                  margin: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: ListTile(
-                    title: Text(category.name),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('${_getParentName(category.parentId)}'),
-                        Text('${category.fundingPeriodText}'),
-                        Text('المخصص: ${category.allocatedAmount.toStringAsFixed(0)} د.ع'),
-                      ],
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: Icon(Icons.edit, color: Colors.blue),
-                          onPressed: () => _showEditCategoryDialog(category),
-                          tooltip: 'تعديل',
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => _deleteCategory(category),
-                          tooltip: 'حذف',
-                        ),
-                      ],
-                    ),
-                    isThreeLine: true,
-                  ),
-                );
-              },
-            ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddCategoryDialog,
-        backgroundColor: Colors.teal,
-        child: Icon(Icons.add, color: Colors.white),
-        tooltip: 'إضافة باب جديد',
-      ),
-    );
   }
 }

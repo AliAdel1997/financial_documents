@@ -78,128 +78,139 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: Text('طلب حجز جديد'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // اختيار التخصيص
-                DropdownButtonFormField<InstitutionFunding>(
-                  value: selectedAllocation,
-                  decoration: InputDecoration(
-                    labelText: 'اختيار التخصيص',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: allocations.map((allocation) {
-                    final categoryName = _getCategoryName(allocation.categoryId);
-                    final institutionName = _getInstitutionName(allocation.institutionId);
-                    final availableAmount = allocation.remainingAmount;
-                    
-                    return DropdownMenuItem(
-                      value: allocation,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('$categoryName - $institutionName'),
-                          Text(
+          content: SizedBox(
+             width: 400,
+  height: MediaQuery.of(context).size.height * 0.7,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // اختيار التخصيص
+                  DropdownButtonFormField<InstitutionFunding>(
+                    value: selectedAllocation,
+                    decoration: InputDecoration(contentPadding:  EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      labelText: 'اختيار التخصيص',
+                      border: OutlineInputBorder(),
+                    ),
+                    isExpanded: true,
+                    menuMaxHeight: 500,
+                    items: allocations.map((allocation) {
+                      final categoryName = _getCategoryName(allocation.categoryId);
+                      final institutionName = _getInstitutionName(allocation.institutionId);
+                      final availableAmount = allocation.remainingAmount;
+                      
+                      return DropdownMenuItem(
+                        value: allocation,
+                        alignment: Alignment.centerRight,
+                        child:
+                         ListTile(
+                          dense: true,
+                           isThreeLine: true,
+                          title: Text(
+                            '$categoryName - $institutionName',
+                            style: TextStyle(fontSize: 14),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(
                             'المتاح: ${availableAmount.toStringAsFixed(0)} د.ع',
                             style: TextStyle(
                               fontSize: 12,
                               color: availableAmount > 0 ? Colors.green : Colors.red,
                             ),
                           ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setDialogState(() {
-                      selectedAllocation = value;
-                    });
-                  },
-                ),
-                SizedBox(height: 16),
-                // المبلغ المطلوب
-                TextFormField(
-                  controller: amountController,
-                  decoration: InputDecoration(
-                    labelText: 'المبلغ المطلوب حجزه',
-                    border: OutlineInputBorder(),
-                    suffixText: 'د.ع',
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-                SizedBox(height: 16),
-                // الوصف
-                TextFormField(
-                  controller: descriptionController,
-                  decoration: InputDecoration(
-                    labelText: 'وصف الطلب',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 2,
-                ),
-                SizedBox(height: 16),
-                // تاريخ الطلب
-                ListTile(
-                  title: Text('تاريخ الطلب'),
-                  subtitle: Text('${selectedDate.day}/${selectedDate.month}/${selectedDate.year}'),
-                  trailing: Icon(Icons.calendar_today),
-                  onTap: () async {
-                    final date = await showDatePicker(
-                      context: context,
-                      initialDate: selectedDate,
-                      firstDate: DateTime.now().subtract(Duration(days: 30)),
-                      lastDate: DateTime.now().add(Duration(days: 30)),
-                    );
-                    if (date != null) {
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
                       setDialogState(() {
-                        selectedDate = date;
+                        selectedAllocation = value;
                       });
-                    }
-                  },
-                ),
-                SizedBox(height: 16),
-                // رفع مرفق PDF
-                Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!),
-                    borderRadius: BorderRadius.circular(8),
+                    },
                   ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.attach_file, color: Colors.grey[600]),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          selectedPdfName ?? 'لم يتم اختيار مرفق PDF',
-                          style: TextStyle(
-                            color: selectedPdfName != null ? Colors.black : Colors.grey[600],
+                  SizedBox(height: 16),
+                  // المبلغ المطلوب
+                  TextFormField(
+                    controller: amountController,
+                    decoration: InputDecoration(
+                      labelText: 'المبلغ المطلوب حجزه',
+                      border: OutlineInputBorder(),
+                      suffixText: 'د.ع',
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                  SizedBox(height: 16),
+                  // الوصف
+                  TextFormField(
+                    controller: descriptionController,
+                    decoration: InputDecoration(
+                      labelText: 'وصف الطلب',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 2,
+                  ),
+                  SizedBox(height: 16),
+                  // تاريخ الطلب
+                  ListTile(
+                    title: Text('تاريخ الطلب'),
+                    subtitle: Text('${selectedDate.day}/${selectedDate.month}/${selectedDate.year}'),
+                    trailing: Icon(Icons.calendar_today),
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime.now().subtract(Duration(days: 30)),
+                        lastDate: DateTime.now().add(Duration(days: 30)),
+                      );
+                      if (date != null) {
+                        setDialogState(() {
+                          selectedDate = date;
+                        });
+                      }
+                    },
+                  ),
+                  SizedBox(height: 16),
+                  // رفع مرفق PDF
+                  Container(
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey[300]!),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.attach_file, color: Colors.grey[600]),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            selectedPdfName ?? 'لم يتم اختيار مرفق PDF',
+                            style: TextStyle(
+                              color: selectedPdfName != null ? Colors.black : Colors.grey[600],
+                            ),
                           ),
                         ),
-                      ),
-                      TextButton.icon(
-                        onPressed: () async {
-                          final result = await FilePicker.platform.pickFiles(
-                            type: FileType.custom,
-                            allowedExtensions: ['pdf'],
-                            allowMultiple: false,
-                          );
-
-                          if (result != null && result.files.single.path != null) {
-                            setDialogState(() {
-                              selectedPdfPath = result.files.single.path;
-                              selectedPdfName = result.files.single.name;
-                            });
-                          }
-                        },
-                        icon: Icon(Icons.upload_file),
-                        label: Text('اختيار'),
-                      ),
-                    ],
+                        TextButton.icon(
+                          onPressed: () async {
+                            final result = await FilePicker.platform.pickFiles(
+                              type: FileType.custom,
+                              allowedExtensions: ['pdf'],
+                              allowMultiple: false,
+                            );
+            
+                            if (result != null && result.files.single.path != null) {
+                              setDialogState(() {
+                                selectedPdfPath = result.files.single.path;
+                                selectedPdfName = result.files.single.name;
+                              });
+                            }
+                          },
+                          icon: Icon(Icons.upload_file),
+                          label: Text('اختيار'),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           actions: [
@@ -249,7 +260,7 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
                     ..reservationAttachmentPath = selectedPdfPath
                     ..requestDate = selectedDate
                     ..year = selectedAllocation!.year
-                    ..month = selectedAllocation!.month
+                    ..month = selectedAllocation!.month ?? 0
                     ..createdAt = DateTime.now()
                     ..updatedAt = DateTime.now();
 
@@ -299,111 +310,115 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: Text('تنفيذ الصرف'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // معلومات الطلب
-                Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.blue[50],
-                    borderRadius: BorderRadius.circular(8),
+          content: SizedBox(
+             width: 400,
+  height: MediaQuery.of(context).size.height * 0.7,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // معلومات الطلب
+                  Container(
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('معلومات الطلب:', style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text('المبلغ المطلوب: ${transaction.requestedAmount.toStringAsFixed(0)} د.ع'),
+                        Text('تاريخ الطلب: ${transaction.requestDate?.day}/${transaction.requestDate?.month}/${transaction.requestDate?.year}'),
+                        if (transaction.requestDescription != null)
+                          Text('الوصف: ${transaction.requestDescription}'),
+                      ],
+                    ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('معلومات الطلب:', style: TextStyle(fontWeight: FontWeight.bold)),
-                      Text('المبلغ المطلوب: ${transaction.requestedAmount.toStringAsFixed(0)} د.ع'),
-                      Text('تاريخ الطلب: ${transaction.requestDate?.day}/${transaction.requestDate?.month}/${transaction.requestDate?.year}'),
-                      if (transaction.requestDescription != null)
-                        Text('الوصف: ${transaction.requestDescription}'),
-                    ],
+                  SizedBox(height: 16),
+                  // المبلغ المنفذ
+                  TextFormField(
+                    controller: executedAmountController,
+                    decoration: InputDecoration(
+                      labelText: 'المبلغ المنفذ فعلياً',
+                      border: OutlineInputBorder(),
+                      suffixText: 'د.ع',
+                    ),
+                    keyboardType: TextInputType.number,
                   ),
-                ),
-                SizedBox(height: 16),
-                // المبلغ المنفذ
-                TextFormField(
-                  controller: executedAmountController,
-                  decoration: InputDecoration(
-                    labelText: 'المبلغ المنفذ فعلياً',
-                    border: OutlineInputBorder(),
-                    suffixText: 'د.ع',
+                  SizedBox(height: 16),
+                  // وصف التنفيذ
+                  TextFormField(
+                    controller: executionDescriptionController,
+                    decoration: InputDecoration(
+                      labelText: 'وصف التنفيذ',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 2,
                   ),
-                  keyboardType: TextInputType.number,
-                ),
-                SizedBox(height: 16),
-                // وصف التنفيذ
-                TextFormField(
-                  controller: executionDescriptionController,
-                  decoration: InputDecoration(
-                    labelText: 'وصف التنفيذ',
-                    border: OutlineInputBorder(),
+                  SizedBox(height: 16),
+                  // تاريخ التنفيذ
+                  ListTile(
+                    title: Text('تاريخ التنفيذ'),
+                    subtitle: Text('${selectedDate.day}/${selectedDate.month}/${selectedDate.year}'),
+                    trailing: Icon(Icons.calendar_today),
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: transaction.requestDate ?? DateTime.now().subtract(Duration(days: 365)),
+                        lastDate: DateTime.now().add(Duration(days: 30)),
+                      );
+                      if (date != null) {
+                        setDialogState(() {
+                          selectedDate = date;
+                        });
+                      }
+                    },
                   ),
-                  maxLines: 2,
-                ),
-                SizedBox(height: 16),
-                // تاريخ التنفيذ
-                ListTile(
-                  title: Text('تاريخ التنفيذ'),
-                  subtitle: Text('${selectedDate.day}/${selectedDate.month}/${selectedDate.year}'),
-                  trailing: Icon(Icons.calendar_today),
-                  onTap: () async {
-                    final date = await showDatePicker(
-                      context: context,
-                      initialDate: selectedDate,
-                      firstDate: transaction.requestDate ?? DateTime.now().subtract(Duration(days: 365)),
-                      lastDate: DateTime.now().add(Duration(days: 30)),
-                    );
-                    if (date != null) {
-                      setDialogState(() {
-                        selectedDate = date;
-                      });
-                    }
-                  },
-                ),
-                SizedBox(height: 16),
-                // رفع مرفق PDF للتنفيذ
-                Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.attach_file, color: Colors.grey[600]),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          selectedPdfName ?? 'لم يتم اختيار مرفق التنفيذ',
-                          style: TextStyle(
-                            color: selectedPdfName != null ? Colors.black : Colors.grey[600],
+                  SizedBox(height: 16),
+                  // رفع مرفق PDF للتنفيذ
+                  Container(
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey[300]!),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.attach_file, color: Colors.grey[600]),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            selectedPdfName ?? 'لم يتم اختيار مرفق التنفيذ',
+                            style: TextStyle(
+                              color: selectedPdfName != null ? Colors.black : Colors.grey[600],
+                            ),
                           ),
                         ),
-                      ),
-                      TextButton.icon(
-                        onPressed: () async {
-                          final result = await FilePicker.platform.pickFiles(
-                            type: FileType.custom,
-                            allowedExtensions: ['pdf'],
-                            allowMultiple: false,
-                          );
-
-                          if (result != null && result.files.single.path != null) {
-                            setDialogState(() {
-                              selectedPdfPath = result.files.single.path;
-                              selectedPdfName = result.files.single.name;
-                            });
-                          }
-                        },
-                        icon: Icon(Icons.upload_file),
-                        label: Text('اختيار'),
-                      ),
-                    ],
+                        TextButton.icon(
+                          onPressed: () async {
+                            final result = await FilePicker.platform.pickFiles(
+                              type: FileType.custom,
+                              allowedExtensions: ['pdf'],
+                              allowMultiple: false,
+                            );
+            
+                            if (result != null && result.files.single.path != null) {
+                              setDialogState(() {
+                                selectedPdfPath = result.files.single.path;
+                                selectedPdfName = result.files.single.name;
+                              });
+                            }
+                          },
+                          icon: Icon(Icons.upload_file),
+                          label: Text('اختيار'),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           actions: [

@@ -15,15 +15,14 @@ class OrganizationProvider with ChangeNotifier {
   Future<void> loadOrganization() async {
     _isLoading = true;
     _error = null;
-    notifyListeners();
-
+    
     try {
       _organization = await DatabaseService.getMainOrganization();
     } catch (e) {
       _error = 'خطأ في تحميل بيانات المؤسسة: $e';
     } finally {
       _isLoading = false;
-      notifyListeners();
+      notifyListeners(); // استدعاء notifyListeners فقط في النهاية
     }
   }
 

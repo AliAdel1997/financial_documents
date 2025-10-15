@@ -1,5 +1,5 @@
 import 'package:isar/isar.dart';
-import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 import '../models/document.dart';
 import '../models/organization.dart';
 import '../models/funding_models.dart';
@@ -11,7 +11,16 @@ class DatabaseService {
   static Future<void> initialize() async {
     if (_isInitialized) return;
 
-    final dir = await getApplicationDocumentsDirectory();
+    // تخزين قاعدة البيانات في مجلد المشروع
+    final dir = Directory.current;
+    final dbPath = '${dir.path}/database';
+    
+    // إنشاء مجلد قاعدة البيانات إذا لم يكن موجوداً
+    final dbDir = Directory(dbPath);
+    if (!await dbDir.exists()) {
+      await dbDir.create(recursive: true);
+    }
+    
     isar = await Isar.open([
       DocumentSchema,
       PrintBatchSchema,
@@ -23,7 +32,8 @@ class DatabaseService {
       FundingAttachmentSchema,
       FundingArchiveSchema,
       FundingTransactionSchema,
-    ], directory: dir.path);
+    ], directory: dbPath, name: 'financial_documents');
+    print('Database path: $dbPath');
 
     // إنشاء إعدادات افتراضية إذا لم تكن موجودة
     await _initializeDefaultSettings();
@@ -772,6 +782,65 @@ class DatabaseService {
     } catch (e) {
       print('خطأ في تنفيذ الصرف: $e');
       return false;
+    }
+  }
+
+  /// إنشاء بيانات تجريبية للفئات المالية
+  static Future<void> createSampleFundingCategories() async {
+    try {
+      // التحقق من وجود فئات موجودة
+      final existingCategories = await isar.fundingCategorys.where().findAll();
+      if (existingCategories.isNotEmpty) {
+        print('فئات موجودة مسبقاً: ${existingCategories.length}');
+        return;
+      }
+
+      await isar.writeTxn(() async {
+        // فئات رئيسية (بدون ربط بنوع التمويل)
+        final cat1 = FundingCategory()
+          ..name = 'الرواتب والأجور'
+          ..description = 'رواتب الموظفين والأجور الإضافية'
+          ..parentId = null
+          ..createdAt = DateTime.now()
+          ..updatedAt = DateTime.now();
+        
+        final cat2 = FundingCategory()
+          ..name = 'المستلزمات المكتبية'
+          ..description = 'القرطاسية والمواد المكتبية'
+          ..parentId = null
+          ..createdAt = DateTime.now()
+          ..updatedAt = DateTime.now();
+
+        final cat3 = FundingCategory()
+          ..name = 'الوقود والمحروقات'
+          ..description = 'وقود السيارات والمولدات'
+          ..parentId = null
+          ..createdAt = DateTime.now()
+          ..updatedAt = DateTime.now();
+
+        await isar.fundingCategorys.putAll([cat1, cat2, cat3]);
+        
+        // فئات فرعية
+        final subCat1 = FundingCategory()
+          ..name = 'رواتب الموظفين'
+          ..description = 'الرواتب الأساسية للموظفين'
+          ..parentId = cat1.id
+          ..createdAt = DateTime.now()
+          ..updatedAt = DateTime.now();
+
+        final subCat2 = FundingCategory()
+          ..name = 'أجور العمل الإضافي'
+          ..description = 'أجور ساعات العمل الإضافية'
+          ..parentId = cat1.id
+          ..createdAt = DateTime.now()
+          ..updatedAt = DateTime.now();
+
+        await isar.fundingCategorys.putAll([subCat1, subCat2]);
+      });
+
+      print('تم إنشاء بيانات تجريبية للفئات المالية');
+    } catch (e) {
+      print('خطأ في إنشاء البيانات التجريبية: $e');
     }
   }
 }

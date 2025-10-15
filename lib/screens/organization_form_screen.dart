@@ -272,20 +272,7 @@ class _OrganizationFormScreenState extends State<OrganizationFormScreen> {
         filled: true,
         fillColor: Colors.grey[50],
       ),
-      validator: (value) {
-        if (isRequired && (value == null || value.trim().isEmpty)) {
-          return 'هذا الحقل مطلوب';
-        }
-        
-        // التحقق من صحة الآيبان
-        if (controller == _ibanController && value != null && value.isNotEmpty) {
-          if (!_validateIban(value)) {
-            return 'تنسيق الآيبان غير صحيح';
-          }
-        }
-        
-        return null;
-      },
+  
     );
   }
 
@@ -355,21 +342,6 @@ class _OrganizationFormScreenState extends State<OrganizationFormScreen> {
         ),
       ],
     );
-  }
-
-  bool _validateIban(String iban) {
-    // إزالة الفراغات والتحويل لأحرف كبيرة
-    iban = iban.replaceAll(' ', '').toUpperCase();
-    
-    // التحقق من طول الآيبان العراقي (23 رمز)
-    if (iban.length != 23) return false;
-    
-    // التحقق من أن يبدأ بـ IQ
-    if (!iban.startsWith('IQ')) return false;
-    
-    // التحقق من أن باقي الأحرف أرقام
-    final numericPart = iban.substring(2);
-    return RegExp(r'^\d+$').hasMatch(numericPart);
   }
 
   Future<void> _saveOrganization() async {

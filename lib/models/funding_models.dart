@@ -12,16 +12,7 @@ class FundingCategory {
   
   int? parentId; // يشير إلى الباب الأعلى
   
-  @Index()
-  double allocatedAmount = 0; // المبلغ المخصص
-  
-  @Index()
-  late String fundingType; // 'سنوي' أو 'شهري'
-  
-  @Index()
-  late int year; // السنة
-  
-  int? month; // الشهر (اختياري - فقط للتمويل الشهري)
+  String? description; // وصف الباب (اختياري)
   
   DateTime? createdAt;
   DateTime? updatedAt;
@@ -33,56 +24,22 @@ class FundingCategory {
     Id? id,
     String? name,
     int? parentId,
-    double? allocatedAmount,
-    String? fundingType,
-    int? year,
-    int? month,
+    String? description,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
-    final category = FundingCategory()
+    return FundingCategory()
       ..id = id ?? this.id
       ..name = name ?? this.name
       ..parentId = parentId ?? this.parentId
-      ..allocatedAmount = allocatedAmount ?? this.allocatedAmount
-      ..fundingType = fundingType ?? this.fundingType
-      ..year = year ?? this.year
-      ..month = month ?? this.month
+      ..description = description ?? this.description
       ..createdAt = createdAt ?? this.createdAt
       ..updatedAt = updatedAt ?? this.updatedAt;
-    return category;
   }
 
   @override
   String toString() {
-    return 'FundingCategory{id: $id, name: $name, parentId: $parentId, '
-        'allocatedAmount: $allocatedAmount, fundingType: $fundingType, '
-        'year: $year, month: $month}';
-  }
-
-  /// الحصول على اسم الشهر بالعربية
-  String get monthName {
-    if (month == null) return '';
-    const monthNames = [
-      '', 'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
-    ];
-    return month! > 0 && month! <= 12 ? monthNames[month!] : '';
-  }
-
-  /// نص التمويل الكامل (النوع + السنة + الشهر)
-  String get fundingPeriodText {
-    if (fundingType == 'شهري' && month != null) {
-      return '$fundingType - $monthName $year';
-    }
-    return '$fundingType - $year';
-  }
-
-  /// التحقق من أن التمويل صالح للفترة المحددة
-  bool isValidForPeriod(int checkYear, [int? checkMonth]) {
-    if (year != checkYear) return false;
-    if (fundingType == 'شهري' && month != checkMonth) return false;
-    return true;
+    return 'FundingCategory{id: $id, name: $name, parentId: $parentId, description: $description}';
   }
 
   @override
@@ -148,22 +105,24 @@ class InstitutionFunding {
   Id id = Isar.autoIncrement;
   
   @Index()
-  late int institutionId;
+  int institutionId = 0;
   
   @Index()
-  late int categoryId;
+  int categoryId = 0;
   
-  late double allocatedAmount; // المبلغ المخصص
-  late double reservedAmount; // المبلغ المحجوز
-  late double spentAmount; // المبلغ المصروف
+  @Index()
+  String fundingType = ''; // 'سنوي' أو 'شهري'
+  
+  double allocatedAmount = 0.0; // المبلغ المخصص
+  double reservedAmount = 0.0; // المبلغ المحجوز
+  double spentAmount = 0.0; // المبلغ المصروف
   
   String? executionAttachmentPath; // مسار مرفق تنفيذ الصرف (PDF)
   
   @Index()
-  late int year;
+  int year = 0;
   
-  @Index()
-  late int month;
+  int? month; // الشهر (اختياري - فقط للتمويل الشهري)
   
   DateTime? createdAt;
   DateTime? updatedAt;
@@ -173,11 +132,30 @@ class InstitutionFunding {
   /// المبلغ المتبقي (محسوب تلقائياً)
   double get remainingAmount => allocatedAmount - reservedAmount - spentAmount;
 
+  /// الحصول على اسم الشهر بالعربية
+  String get monthName {
+    if (month == null) return '';
+    const monthNames = [
+      '', 'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+    ];
+    return month! > 0 && month! <= 12 ? monthNames[month!] : '';
+  }
+
+  /// نص التمويل الكامل (النوع + السنة + الشهر)
+  String get fundingPeriodText {
+    if (fundingType == 'شهري' && month != null) {
+      return '$fundingType - $monthName $year';
+    }
+    return '$fundingType - $year';
+  }
+
   /// إنشاء نسخة محدثة من الكائن
   InstitutionFunding copyWith({
     Id? id,
     int? institutionId,
     int? categoryId,
+    String? fundingType,
     double? allocatedAmount,
     double? reservedAmount,
     double? spentAmount,
@@ -191,6 +169,7 @@ class InstitutionFunding {
       ..id = id ?? this.id
       ..institutionId = institutionId ?? this.institutionId
       ..categoryId = categoryId ?? this.categoryId
+      ..fundingType = fundingType ?? this.fundingType
       ..allocatedAmount = allocatedAmount ?? this.allocatedAmount
       ..reservedAmount = reservedAmount ?? this.reservedAmount
       ..spentAmount = spentAmount ?? this.spentAmount
@@ -206,7 +185,7 @@ class InstitutionFunding {
   String toString() {
     return 'InstitutionFunding{id: $id, institutionId: $institutionId, categoryId: $categoryId, '
         'allocatedAmount: $allocatedAmount, reservedAmount: $reservedAmount, spentAmount: $spentAmount, '
-        'remainingAmount: $remainingAmount, year: $year, month: $month}';
+        'remainingAmount: $remainingAmount, year: $year, month: $month, fundingType: $fundingType}';
   }
 
   @override

@@ -1,3 +1,7 @@
+// TODO: يحتاج هذا الملف لإعادة كتابة كاملة بعد تحديث FundingManager
+// تم تعطيله مؤقتاً حتى يتم تحديث الطرق المستخدمة
+
+/*
 import '../services/funding_manager.dart';
 import '../services/funding_examples.dart';
 import '../services/database_service.dart';
@@ -381,4 +385,4 @@ class FundingManagerExamples {
 
     print('\n✅ تم الانتهاء من اختبار حالات الخطأ');
   }
-}
+}*/
