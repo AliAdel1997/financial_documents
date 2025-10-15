@@ -116,7 +116,7 @@ class InstitutionFunding {
   double allocatedAmount = 0.0; // المبلغ المخصص
   double reservedAmount = 0.0; // المبلغ المحجوز
   double spentAmount = 0.0; // المبلغ المصروف
-  
+    
   String? executionAttachmentPath; // مسار مرفق تنفيذ الصرف (PDF)
   
   @Index()
