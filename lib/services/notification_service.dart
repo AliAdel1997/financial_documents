@@ -9,21 +9,28 @@ class NotificationService {
   static Future<List<FundingTransaction>> getOverdueReservations() async {
     try {
       // الحصول على جميع المعاملات المعلقة
-      List<FundingTransaction> allTransactions = await DatabaseService.getAllFundingTransactions();
-      
+      List<FundingTransaction> allTransactions =
+          await DatabaseService.getAllFundingTransactions();
+
       DateTime now = DateTime.now();
-      DateTime thirtyDaysAgo = now.subtract(Duration(days: OVERDUE_DAYS_THRESHOLD));
-      
+      DateTime thirtyDaysAgo = now.subtract(
+        Duration(days: OVERDUE_DAYS_THRESHOLD),
+      );
+
       // فلترة الحجوزات المعلقة القديمة
-      List<FundingTransaction> overdueReservations = allTransactions.where((transaction) {
-        return transaction.status == 'pending' && 
-               transaction.requestDate != null &&
-               transaction.requestDate!.isBefore(thirtyDaysAgo);
+      List<FundingTransaction> overdueReservations = allTransactions.where((
+        transaction,
+      ) {
+        return transaction.status == 'pending' &&
+            transaction.requestDate != null &&
+            transaction.requestDate!.isBefore(thirtyDaysAgo);
       }).toList();
-      
+
       // ترتيب حسب التاريخ الأقدم أولاً
-      overdueReservations.sort((a, b) => a.requestDate!.compareTo(b.requestDate!));
-      
+      overdueReservations.sort(
+        (a, b) => a.requestDate!.compareTo(b.requestDate!),
+      );
+
       return overdueReservations;
     } catch (e) {
       print('خطأ في الحصول على الحجوزات المتأخرة: $e');
@@ -75,11 +82,11 @@ class NotificationService {
 
     int count = overdueReservations.length;
     String message = getOverdueMessage(count);
-    
+
     // أقدم حجز
     FundingTransaction oldestReservation = overdueReservations.first;
     int oldestDays = getDaysOverdue(oldestReservation.createdAt!);
-    
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -101,10 +108,7 @@ class NotificationService {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                message,
-                style: TextStyle(fontSize: 16),
-              ),
+              Text(message, style: TextStyle(fontSize: 16)),
               SizedBox(height: 12),
               Container(
                 padding: EdgeInsets.all(12),
@@ -118,7 +122,11 @@ class NotificationService {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.schedule, size: 16, color: Colors.orange[700]),
+                        Icon(
+                          Icons.schedule,
+                          size: 16,
+                          color: Colors.orange[700],
+                        ),
                         SizedBox(width: 4),
                         Text(
                           'أقدم حجز: $oldestDays يوماً',
@@ -176,7 +184,7 @@ class NotificationService {
 
     int count = overdueReservations.length;
     String message = getOverdueMessage(count);
-    
+
     return Container(
       margin: EdgeInsets.all(16),
       child: MaterialBanner(
@@ -203,10 +211,7 @@ class NotificationService {
                   ),
                   Text(
                     'حجوزات لم يتم تنفيذها لأكثر من 30 يوماً',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
                 ],
               ),
@@ -214,10 +219,7 @@ class NotificationService {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: onDismiss,
-            child: Text('إخفاء'),
-          ),
+          TextButton(onPressed: onDismiss, child: Text('إخفاء')),
           ElevatedButton.icon(
             onPressed: onTap,
             icon: Icon(Icons.visibility, size: 16),
@@ -250,11 +252,7 @@ class NotificationService {
         duration: Duration(seconds: 5),
         content: Row(
           children: [
-            Icon(
-              Icons.warning_amber_rounded,
-              color: Colors.white,
-              size: 20,
-            ),
+            Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
             SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -284,7 +282,7 @@ class NotificationService {
   ) {
     int daysOverdue = getDaysOverdue(reservation.requestDate!);
     Color overdueColor = getOverdueColor(daysOverdue);
-    
+
     return Card(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       elevation: 3,
@@ -310,11 +308,7 @@ class NotificationService {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Icons.schedule,
-                        size: 16,
-                        color: overdueColor,
-                      ),
+                      Icon(Icons.schedule, size: 16, color: overdueColor),
                       SizedBox(width: 4),
                       Text(
                         'متأخر $daysOverdue يوماً',
@@ -338,9 +332,9 @@ class NotificationService {
                 ),
               ],
             ),
-            
+
             SizedBox(height: 12),
-            
+
             // تفاصيل الحجز
             Row(
               children: [
@@ -352,9 +346,9 @@ class NotificationService {
                 ),
               ],
             ),
-            
+
             SizedBox(height: 8),
-            
+
             Row(
               children: [
                 Icon(Icons.business, size: 16, color: Colors.grey[600]),
@@ -365,9 +359,9 @@ class NotificationService {
                 ),
               ],
             ),
-            
+
             SizedBox(height: 8),
-            
+
             Row(
               children: [
                 Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
@@ -378,8 +372,9 @@ class NotificationService {
                 ),
               ],
             ),
-            
-            if (reservation.requestDescription != null && reservation.requestDescription!.isNotEmpty) ...[
+
+            if (reservation.requestDescription != null &&
+                reservation.requestDescription!.isNotEmpty) ...[
               SizedBox(height: 8),
               Row(
                 children: [
@@ -416,12 +411,13 @@ class NotificationService {
     VoidCallback onNavigateToReservations,
   ) async {
     try {
-      List<FundingTransaction> overdueReservations = await getOverdueReservations();
-      
+      List<FundingTransaction> overdueReservations =
+          await getOverdueReservations();
+
       if (overdueReservations.isNotEmpty) {
         // تأخير قصير للسماح للواجهة بالتحميل
         await Future.delayed(Duration(milliseconds: 500));
-        
+
         if (context.mounted) {
           showOverdueReservationsSnackBar(
             context,

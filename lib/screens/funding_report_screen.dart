@@ -14,7 +14,7 @@ class _FundingReportScreenState extends State<FundingReportScreen> {
   List<FundingReportNode> _reportNodes = [];
   List<Institution> _institutions = [];
   bool _isLoading = false;
-  
+
   // فلاتر
   Institution? _selectedInstitution;
   int? _selectedYear;
@@ -56,7 +56,7 @@ class _FundingReportScreenState extends State<FundingReportScreen> {
 
     try {
       final isar = DatabaseService.isar;
-      
+
       // توليد التقرير الأساسي
       List<FundingReportNode> nodes = await generateFundingReport(
         isar,
@@ -65,7 +65,9 @@ class _FundingReportScreenState extends State<FundingReportScreen> {
       );
 
       // تطبيق المرشحات الإضافية
-      if (_minAllocated != null || _minUtilizationRate != null || _showOnlyWithFunding) {
+      if (_minAllocated != null ||
+          _minUtilizationRate != null ||
+          _showOnlyWithFunding) {
         nodes = filterReport(
           nodes,
           minAllocated: _minAllocated,
@@ -78,8 +80,9 @@ class _FundingReportScreenState extends State<FundingReportScreen> {
         _reportNodes = nodes;
       });
 
-      _showSuccessSnackBar('تم توليد التقرير بنجاح (${nodes.length} فئة جذرية)');
-
+      _showSuccessSnackBar(
+        'تم توليد التقرير بنجاح (${nodes.length} فئة جذرية)',
+      );
     } catch (e) {
       _showErrorSnackBar('خطأ في توليد التقرير: $e');
     } finally {
@@ -150,12 +153,12 @@ class _FundingReportScreenState extends State<FundingReportScreen> {
 
     try {
       final jsonData = exportReportToJson(_reportNodes);
-      
+
       // في تطبيق حقيقي، يمكن حفظ الملف أو مشاركته
       print('تم تصدير البيانات إلى JSON:');
       print('عدد الفئات الجذرية: ${jsonData['totalRootNodes']}');
       print('إجمالي العقد: ${jsonData['totalNodes']}');
-      
+
       _showSuccessSnackBar('تم تصدير البيانات إلى JSON (تحقق من console)');
     } catch (e) {
       _showErrorSnackBar('خطأ في التصدير: $e');
@@ -186,7 +189,7 @@ class _FundingReportScreenState extends State<FundingReportScreen> {
         children: [
           // منطقة المرشحات
           _buildFiltersSection(),
-          
+
           // منطقة العرض
           Expanded(
             child: _isLoading
@@ -201,8 +204,8 @@ class _FundingReportScreenState extends State<FundingReportScreen> {
                     ),
                   )
                 : _reportNodes.isEmpty
-                    ? _buildEmptyState()
-                    : _buildReportTree(),
+                ? _buildEmptyState()
+                : _buildReportTree(),
           ),
         ],
       ),
@@ -232,7 +235,7 @@ class _FundingReportScreenState extends State<FundingReportScreen> {
             ),
           ),
           SizedBox(height: 12),
-          
+
           // الصف الأول: المؤسسة والسنة
           Row(
             children: [
@@ -240,14 +243,20 @@ class _FundingReportScreenState extends State<FundingReportScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('المؤسسة:', style: TextStyle(fontWeight: FontWeight.w500)),
+                    Text(
+                      'المؤسسة:',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
                     SizedBox(height: 4),
                     DropdownButtonFormField<Institution>(
                       value: _selectedInstitution,
                       decoration: InputDecoration(
                         hintText: 'جميع المؤسسات',
                         border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                       ),
                       items: [
                         DropdownMenuItem<Institution>(
@@ -275,21 +284,31 @@ class _FundingReportScreenState extends State<FundingReportScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('السنة:', style: TextStyle(fontWeight: FontWeight.w500)),
+                    Text(
+                      'السنة:',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
                     SizedBox(height: 4),
                     DropdownButtonFormField<int>(
                       value: _selectedYear,
                       decoration: InputDecoration(
                         hintText: 'جميع السنوات',
                         border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                       ),
                       items: [
                         DropdownMenuItem<int>(
                           value: null,
                           child: Text('جميع السنوات'),
                         ),
-                        for (int year = DateTime.now().year; year >= DateTime.now().year - 5; year--)
+                        for (
+                          int year = DateTime.now().year;
+                          year >= DateTime.now().year - 5;
+                          year--
+                        )
                           DropdownMenuItem<int>(
                             value: year,
                             child: Text(year.toString()),
@@ -306,9 +325,9 @@ class _FundingReportScreenState extends State<FundingReportScreen> {
               ),
             ],
           ),
-          
+
           SizedBox(height: 12),
-          
+
           // الصف الثاني: المرشحات المتقدمة
           Row(
             children: [
@@ -318,7 +337,10 @@ class _FundingReportScreenState extends State<FundingReportScreen> {
                   decoration: InputDecoration(
                     labelText: 'أقل مبلغ مخصص',
                     border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                   ),
                   keyboardType: TextInputType.number,
                   onChanged: (value) {
@@ -333,7 +355,10 @@ class _FundingReportScreenState extends State<FundingReportScreen> {
                   decoration: InputDecoration(
                     labelText: 'أقل نسبة استغلال %',
                     border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                   ),
                   keyboardType: TextInputType.number,
                   onChanged: (value) {
@@ -343,9 +368,9 @@ class _FundingReportScreenState extends State<FundingReportScreen> {
               ),
             ],
           ),
-          
+
           SizedBox(height: 12),
-          
+
           // الصف الثالث: checkbox والأزرار
           Row(
             children: [
@@ -390,11 +415,7 @@ class _FundingReportScreenState extends State<FundingReportScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.analytics_outlined,
-            size: 80,
-            color: Colors.grey[400],
-          ),
+          Icon(Icons.analytics_outlined, size: 80, color: Colors.grey[400]),
           SizedBox(height: 16),
           Text(
             'لا توجد بيانات للتقرير',
@@ -407,10 +428,7 @@ class _FundingReportScreenState extends State<FundingReportScreen> {
           SizedBox(height: 8),
           Text(
             'قم بتشغيل الأمثلة أولاً لإنشاء بيانات تجريبية',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[500],
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
           ),
           SizedBox(height: 24),
           ElevatedButton.icon(
@@ -446,7 +464,7 @@ class _FundingReportScreenState extends State<FundingReportScreen> {
   Widget _buildNodeTile(FundingReportNode node, int depth) {
     final indent = depth * 20.0;
     final hasChildren = node.children.isNotEmpty;
-    
+
     return Theme(
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
@@ -467,10 +485,7 @@ class _FundingReportScreenState extends State<FundingReportScreen> {
         ),
         title: Text(
           node.categoryName,
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-          ),
+          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -499,10 +514,7 @@ class _FundingReportScreenState extends State<FundingReportScreen> {
                   SizedBox(width: 4),
                   Text(
                     'نسبة الاستغلال: ${node.utilizationRate.toStringAsFixed(1)}%',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
                 ],
               ),
@@ -537,7 +549,7 @@ class _FundingReportScreenState extends State<FundingReportScreen> {
 
   Color _getNodeColor(FundingReportNode node) {
     if (node.allocated == 0) return Colors.grey;
-    
+
     final utilizationRate = node.utilizationRate;
     if (utilizationRate >= 80) return Colors.green;
     if (utilizationRate >= 50) return Colors.orange;

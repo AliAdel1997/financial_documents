@@ -1,7 +1,3 @@
-import '../services/funding_report_service.dart';
-import '../services/database_service.dart';
-import '../services/funding_manager.dart';
-import '../services/funding_service.dart';
 // TODO: يحتاج هذا الملف لإعادة كتابة بعد تحديث النماذج
 // تم تعطيله مؤقتاً
 

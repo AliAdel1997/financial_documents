@@ -5,10 +5,7 @@ import '../services/database_service.dart';
 class OrganizationFormScreen extends StatefulWidget {
   final Organization? organization; // null للإضافة، غير null للتعديل
 
-  const OrganizationFormScreen({
-    super.key,
-    this.organization,
-  });
+  const OrganizationFormScreen({super.key, this.organization});
 
   @override
   State<OrganizationFormScreen> createState() => _OrganizationFormScreenState();
@@ -17,7 +14,7 @@ class OrganizationFormScreen extends StatefulWidget {
 class _OrganizationFormScreenState extends State<OrganizationFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _scrollController = ScrollController();
-  
+
   // Controllers for form fields
   late final TextEditingController _departmentNameController;
   late final TextEditingController _bankAccountController;
@@ -40,16 +37,28 @@ class _OrganizationFormScreenState extends State<OrganizationFormScreen> {
 
   void _initializeControllers() {
     final org = widget.organization;
-    
-    _departmentNameController = TextEditingController(text: org?.departmentName ?? '');
-    _bankAccountController = TextEditingController(text: org?.bankAccount ?? '');
+
+    _departmentNameController = TextEditingController(
+      text: org?.departmentName ?? '',
+    );
+    _bankAccountController = TextEditingController(
+      text: org?.bankAccount ?? '',
+    );
     _ibanController = TextEditingController(text: org?.iban ?? '');
-    _accountNumberController = TextEditingController(text: org?.accountNumber ?? '');
+    _accountNumberController = TextEditingController(
+      text: org?.accountNumber ?? '',
+    );
     _bankNameController = TextEditingController(text: org?.bankName ?? '');
-    _directorNameController = TextEditingController(text: org?.directorName ?? '');
+    _directorNameController = TextEditingController(
+      text: org?.directorName ?? '',
+    );
     _jobTitleController = TextEditingController(text: org?.jobTitle ?? '');
-    _assignedWorkController = TextEditingController(text: org?.assignedWork ?? '');
-    _positionTypeController = TextEditingController(text: org?.positionType ?? '');
+    _assignedWorkController = TextEditingController(
+      text: org?.assignedWork ?? '',
+    );
+    _positionTypeController = TextEditingController(
+      text: org?.positionType ?? '',
+    );
   }
 
   @override
@@ -122,9 +131,9 @@ class _OrganizationFormScreenState extends State<OrganizationFormScreen> {
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // المعلومات المصرفية
                 _buildSectionCard(
                   title: 'المعلومات المصرفية',
@@ -166,9 +175,9 @@ class _OrganizationFormScreenState extends State<OrganizationFormScreen> {
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // معلومات إضافية
                 _buildSectionCard(
                   title: 'معلومات إضافية',
@@ -192,17 +201,17 @@ class _OrganizationFormScreenState extends State<OrganizationFormScreen> {
                         'مخول بصلاحيات المدير العام',
                         'معاون المدير العام',
                         'مدير قسم الامورالمالية والادارية',
-                        'مدير الحسابات'
+                        'مدير الحسابات',
                       ],
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 32),
-                
+
                 // أزرار الحفظ والإلغاء
                 _buildActionButtons(),
-                
+
                 const SizedBox(height: 16),
               ],
             ),
@@ -266,13 +275,10 @@ class _OrganizationFormScreenState extends State<OrganizationFormScreen> {
         labelText: isRequired ? '$label *' : label,
         hintText: hint,
         prefixIcon: Icon(icon),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         filled: true,
         fillColor: Colors.grey[50],
       ),
-  
     );
   }
 
@@ -289,16 +295,18 @@ class _OrganizationFormScreenState extends State<OrganizationFormScreen> {
         labelText: label,
         hintText: hint,
         prefixIcon: Icon(icon),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         filled: true,
         fillColor: Colors.grey[50],
       ),
-      items: items.map((item) => DropdownMenuItem(
-        value: item,
-        child: Text(item, textDirection: TextDirection.rtl),
-      )).toList(),
+      items: items
+          .map(
+            (item) => DropdownMenuItem(
+              value: item,
+              child: Text(item, textDirection: TextDirection.rtl),
+            ),
+          )
+          .toList(),
       onChanged: (value) {
         controller.text = value ?? '';
       },
@@ -377,7 +385,9 @@ class _OrganizationFormScreenState extends State<OrganizationFormScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(_isEditing ? 'تم حفظ التغييرات بنجاح' : 'تم إضافة المؤسسة بنجاح'),
+            content: Text(
+              _isEditing ? 'تم حفظ التغييرات بنجاح' : 'تم إضافة المؤسسة بنجاح',
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -406,7 +416,9 @@ class _OrganizationFormScreenState extends State<OrganizationFormScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('تأكيد الحذف'),
-        content: const Text('هل أنت متأكد من حذف هذه المؤسسة؟ لا يمكن التراجع عن هذا الإجراء.'),
+        content: const Text(
+          'هل أنت متأكد من حذف هذه المؤسسة؟ لا يمكن التراجع عن هذا الإجراء.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -433,7 +445,7 @@ class _OrganizationFormScreenState extends State<OrganizationFormScreen> {
 
     try {
       await DatabaseService.deleteOrganization(widget.organization!.id);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

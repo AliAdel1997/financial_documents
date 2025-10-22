@@ -14,28 +14,28 @@ class _FundingSpendingScreenState extends State<FundingSpendingScreen> {
   List<InstitutionFunding> allocations = [];
   List<FundingCategory> categories = [];
   List<Institution> institutions = [];
-  
+
   // فلاتر البحث
   int _selectedYear = DateTime.now().year;
   int? _selectedMonth;
   String _selectedFundingType = 'سنوي';
-  
+
   // متغيرات الإدخال
   InstitutionFunding? _selectedAllocation;
   final _spentAmountController = TextEditingController();
   final _reservedAmountController = TextEditingController();
   final _descriptionController = TextEditingController();
-  
+
   String _operationType = 'صرف'; // صرف أو حجز
   String? _selectedPdfPath; // مسار ملف PDF المحدد
   String? _selectedPdfName; // اسم ملف PDF المحدد
-  
+
   @override
   void initState() {
     super.initState();
     _loadData();
   }
-  
+
   @override
   void dispose() {
     _spentAmountController.dispose();
@@ -51,13 +51,17 @@ class _FundingSpendingScreenState extends State<FundingSpendingScreen> {
           .filter()
           .yearEqualTo(_selectedYear)
           .findAll();
-      
+
       // تحميل الأبواب
-      final loadedCategories = await DatabaseService.isar.fundingCategorys.where().findAll();
-      
+      final loadedCategories = await DatabaseService.isar.fundingCategorys
+          .where()
+          .findAll();
+
       // تحميل المؤسسات
-      final loadedInstitutions = await DatabaseService.isar.institutions.where().findAll();
-      
+      final loadedInstitutions = await DatabaseService.isar.institutions
+          .where()
+          .findAll();
+
       setState(() {
         allocations = loadedAllocations;
         categories = loadedCategories;
@@ -65,9 +69,9 @@ class _FundingSpendingScreenState extends State<FundingSpendingScreen> {
       });
     } catch (e) {
       print('خطأ في تحميل البيانات: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ في تحميل البيانات')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('خطأ في تحميل البيانات')));
     }
   }
 
@@ -75,7 +79,9 @@ class _FundingSpendingScreenState extends State<FundingSpendingScreen> {
     return allocations.where((allocation) {
       // فلترة حسب نوع التمويل والشهر
       if (allocation.fundingType != _selectedFundingType) return false;
-      if (_selectedFundingType == 'شهري' && _selectedMonth != null && allocation.month != _selectedMonth) {
+      if (_selectedFundingType == 'شهري' &&
+          _selectedMonth != null &&
+          allocation.month != _selectedMonth) {
         return false;
       }
       return true;
@@ -84,20 +90,22 @@ class _FundingSpendingScreenState extends State<FundingSpendingScreen> {
 
   Future<void> _processSpending() async {
     if (_selectedAllocation == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('يرجى اختيار تخصيص للعمل عليه')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('يرجى اختيار تخصيص للعمل عليه')));
       return;
     }
 
     final amount = double.tryParse(
-      _operationType == 'صرف' ? _spentAmountController.text : _reservedAmountController.text
+      _operationType == 'صرف'
+          ? _spentAmountController.text
+          : _reservedAmountController.text,
     );
-    
+
     if (amount == null || amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('يرجى إدخال مبلغ صحيح')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('يرجى إدخال مبلغ صحيح')));
       return;
     }
 
@@ -105,21 +113,23 @@ class _FundingSpendingScreenState extends State<FundingSpendingScreen> {
     final currentSpent = _selectedAllocation!.spentAmount;
     final currentReserved = _selectedAllocation!.reservedAmount;
     final allocated = _selectedAllocation!.allocatedAmount;
-    
+
     double newSpent = currentSpent;
     double newReserved = currentReserved;
-    
+
     if (_operationType == 'صرف') {
       newSpent = currentSpent + amount;
     } else {
       newReserved = currentReserved + amount;
     }
-    
+
     if (newSpent + newReserved > allocated) {
       final remaining = allocated - currentSpent - currentReserved;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('المبلغ المطلوب يتجاوز المتبقي من التخصيص!\nالمتبقي: ${remaining.toStringAsFixed(0)} د.ع'),
+          content: Text(
+            'المبلغ المطلوب يتجاوز المتبقي من التخصيص!\nالمتبقي: ${remaining.toStringAsFixed(0)} د.ع',
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -130,13 +140,15 @@ class _FundingSpendingScreenState extends State<FundingSpendingScreen> {
       final updatedAllocation = _selectedAllocation!.copyWith(
         spentAmount: newSpent,
         reservedAmount: newReserved,
-        executionAttachmentPath: _operationType == 'صرف' ? _selectedPdfPath : _selectedAllocation!.executionAttachmentPath,
+        executionAttachmentPath: _operationType == 'صرف'
+            ? _selectedPdfPath
+            : _selectedAllocation!.executionAttachmentPath,
         updatedAt: DateTime.now(),
       );
-      
+
       await DatabaseService.isar.writeTxn(() async {
         await DatabaseService.isar.institutionFundings.put(updatedAllocation);
-        
+
         // إنشاء سجل في الأرشيف
         final archiveRecord = FundingArchive()
           ..fundingId = _selectedAllocation!.id
@@ -144,16 +156,16 @@ class _FundingSpendingScreenState extends State<FundingSpendingScreen> {
           ..categoryId = _selectedAllocation!.categoryId
           ..operationType = _operationType
           ..amount = amount
-          ..description = _descriptionController.text.trim().isEmpty 
-            ? null 
-            : _descriptionController.text.trim()
+          ..description = _descriptionController.text.trim().isEmpty
+              ? null
+              : _descriptionController.text.trim()
           ..executionAttachmentPath = _selectedPdfPath
           ..year = _selectedAllocation!.year
           ..month = _selectedAllocation!.month ?? 0
           ..executedAt = DateTime.now()
           ..createdAt = DateTime.now()
           ..updatedAt = DateTime.now();
-        
+
         await DatabaseService.isar.fundingArchives.put(archiveRecord);
       });
 
@@ -165,17 +177,17 @@ class _FundingSpendingScreenState extends State<FundingSpendingScreen> {
         _selectedPdfPath = null;
         _selectedPdfName = null;
       });
-      
+
       await _loadData();
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('تم تسجيل ${_operationType} بنجاح')),
       );
     } catch (e) {
       print('خطأ في تسجيل ${_operationType}: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ في تسجيل ${_operationType}')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('خطأ في تسجيل ${_operationType}')));
     }
   }
 
@@ -208,16 +220,16 @@ class _FundingSpendingScreenState extends State<FundingSpendingScreen> {
           _selectedPdfPath = result.files.single.path;
           _selectedPdfName = result.files.single.name;
         });
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('تم اختيار الملف: ${_selectedPdfName}')),
         );
       }
     } catch (e) {
       print('خطأ في اختيار الملف: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ في اختيار الملف')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('خطأ في اختيار الملف')));
     }
   }
 
@@ -227,15 +239,15 @@ class _FundingSpendingScreenState extends State<FundingSpendingScreen> {
         // فتح الملف باستخدام التطبيق الافتراضي
         await Process.start('explorer', [filePath], runInShell: true);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('الملف غير موجود')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('الملف غير موجود')));
       }
     } catch (e) {
       print('خطأ في فتح الملف: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ في فتح الملف')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('خطأ في فتح الملف')));
     }
   }
 
@@ -290,10 +302,14 @@ class _FundingSpendingScreenState extends State<FundingSpendingScreen> {
                           labelText: 'نوع التمويل',
                           border: OutlineInputBorder(),
                         ),
-                        items: ['سنوي', 'شهري'].map((type) => DropdownMenuItem(
-                          value: type,
-                          child: Text(type),
-                        )).toList(),
+                        items: ['سنوي', 'شهري']
+                            .map(
+                              (type) => DropdownMenuItem(
+                                value: type,
+                                child: Text(type),
+                              ),
+                            )
+                            .toList(),
                         onChanged: (value) {
                           setState(() {
                             _selectedFundingType = value!;
@@ -318,8 +334,18 @@ class _FundingSpendingScreenState extends State<FundingSpendingScreen> {
                           items: List.generate(12, (index) {
                             final month = index + 1;
                             const monthNames = [
-                              'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-                              'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+                              'يناير',
+                              'فبراير',
+                              'مارس',
+                              'أبريل',
+                              'مايو',
+                              'يونيو',
+                              'يوليو',
+                              'أغسطس',
+                              'سبتمبر',
+                              'أكتوبر',
+                              'نوفمبر',
+                              'ديسمبر',
                             ];
                             return DropdownMenuItem(
                               value: month,
@@ -386,10 +412,14 @@ class _FundingSpendingScreenState extends State<FundingSpendingScreen> {
                     border: OutlineInputBorder(),
                   ),
                   items: _filteredAllocations.map((allocation) {
-                    final categoryName = _getCategoryName(allocation.categoryId);
-                    final institutionName = _getInstitutionName(allocation.institutionId);
+                    final categoryName = _getCategoryName(
+                      allocation.categoryId,
+                    );
+                    final institutionName = _getInstitutionName(
+                      allocation.institutionId,
+                    );
                     final remainingAmount = allocation.remainingAmount;
-                    
+
                     return DropdownMenuItem(
                       value: allocation,
                       child: Column(
@@ -400,7 +430,9 @@ class _FundingSpendingScreenState extends State<FundingSpendingScreen> {
                             'المتبقي: ${remainingAmount.toStringAsFixed(0)} د.ع',
                             style: TextStyle(
                               fontSize: 12,
-                              color: remainingAmount >= 0 ? Colors.green : Colors.red,
+                              color: remainingAmount >= 0
+                                  ? Colors.green
+                                  : Colors.red,
                             ),
                           ),
                         ],
@@ -419,9 +451,9 @@ class _FundingSpendingScreenState extends State<FundingSpendingScreen> {
                   children: [
                     Expanded(
                       child: TextFormField(
-                        controller: _operationType == 'صرف' 
-                          ? _spentAmountController 
-                          : _reservedAmountController,
+                        controller: _operationType == 'صرف'
+                            ? _spentAmountController
+                            : _reservedAmountController,
                         decoration: InputDecoration(
                           labelText: 'مبلغ ${_operationType}',
                           border: OutlineInputBorder(),
@@ -434,9 +466,14 @@ class _FundingSpendingScreenState extends State<FundingSpendingScreen> {
                     ElevatedButton(
                       onPressed: _processSpending,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _operationType == 'صرف' ? Colors.red : Colors.orange,
+                        backgroundColor: _operationType == 'صرف'
+                            ? Colors.red
+                            : Colors.orange,
                         foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
                       ),
                       child: Text('تسجيل ${_operationType}'),
                     ),
@@ -458,13 +495,19 @@ class _FundingSpendingScreenState extends State<FundingSpendingScreen> {
                               ),
                               child: Row(
                                 children: [
-                                  Icon(Icons.attach_file, color: Colors.grey[600]),
+                                  Icon(
+                                    Icons.attach_file,
+                                    color: Colors.grey[600],
+                                  ),
                                   SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      _selectedPdfName ?? 'لم يتم اختيار مرفق PDF',
+                                      _selectedPdfName ??
+                                          'لم يتم اختيار مرفق PDF',
                                       style: TextStyle(
-                                        color: _selectedPdfName != null ? Colors.black : Colors.grey[600],
+                                        color: _selectedPdfName != null
+                                            ? Colors.black
+                                            : Colors.grey[600],
                                       ),
                                     ),
                                   ),
@@ -507,7 +550,9 @@ class _FundingSpendingScreenState extends State<FundingSpendingScreen> {
               itemBuilder: (context, index) {
                 final allocation = _filteredAllocations[index];
                 final categoryName = _getCategoryName(allocation.categoryId);
-                final institutionName = _getInstitutionName(allocation.institutionId);
+                final institutionName = _getInstitutionName(
+                  allocation.institutionId,
+                );
 
                 return Card(
                   margin: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -516,14 +561,24 @@ class _FundingSpendingScreenState extends State<FundingSpendingScreen> {
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('السنة: ${allocation.year} - الشهر: ${allocation.month}'),
-                        Text('المخصص: ${allocation.allocatedAmount.toStringAsFixed(0)} د.ع'),
-                        Text('المحجوز: ${allocation.reservedAmount.toStringAsFixed(0)} د.ع'),
-                        Text('المصروف: ${allocation.spentAmount.toStringAsFixed(0)} د.ع'),
+                        Text(
+                          'السنة: ${allocation.year} - الشهر: ${allocation.month}',
+                        ),
+                        Text(
+                          'المخصص: ${allocation.allocatedAmount.toStringAsFixed(0)} د.ع',
+                        ),
+                        Text(
+                          'المحجوز: ${allocation.reservedAmount.toStringAsFixed(0)} د.ع',
+                        ),
+                        Text(
+                          'المصروف: ${allocation.spentAmount.toStringAsFixed(0)} د.ع',
+                        ),
                         Text(
                           'المتبقي: ${allocation.remainingAmount.toStringAsFixed(0)} د.ع',
                           style: TextStyle(
-                            color: allocation.remainingAmount >= 0 ? Colors.green : Colors.red,
+                            color: allocation.remainingAmount >= 0
+                                ? Colors.green
+                                : Colors.red,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -531,7 +586,11 @@ class _FundingSpendingScreenState extends State<FundingSpendingScreen> {
                         if (allocation.executionAttachmentPath != null)
                           Row(
                             children: [
-                              Icon(Icons.picture_as_pdf, size: 16, color: Colors.red),
+                              Icon(
+                                Icons.picture_as_pdf,
+                                size: 16,
+                                color: Colors.red,
+                              ),
                               SizedBox(width: 4),
                               Expanded(
                                 child: Text(
@@ -545,18 +604,24 @@ class _FundingSpendingScreenState extends State<FundingSpendingScreen> {
                               ),
                               IconButton(
                                 icon: Icon(Icons.open_in_new, size: 16),
-                                onPressed: () => _openPdfFile(allocation.executionAttachmentPath!),
+                                onPressed: () => _openPdfFile(
+                                  allocation.executionAttachmentPath!,
+                                ),
                                 tooltip: 'فتح المرفق',
                               ),
                             ],
                           ),
                         // شريط التقدم
                         LinearProgressIndicator(
-                          value: allocation.allocatedAmount > 0 
-                            ? (allocation.spentAmount + allocation.reservedAmount) / allocation.allocatedAmount
-                            : 0,
+                          value: allocation.allocatedAmount > 0
+                              ? (allocation.spentAmount +
+                                        allocation.reservedAmount) /
+                                    allocation.allocatedAmount
+                              : 0,
                           backgroundColor: Colors.grey[300],
-                          color: allocation.remainingAmount >= 0 ? Colors.blue : Colors.red,
+                          color: allocation.remainingAmount >= 0
+                              ? Colors.blue
+                              : Colors.red,
                         ),
                       ],
                     ),

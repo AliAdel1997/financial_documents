@@ -8,29 +8,27 @@ import 'screens/home_screen.dart';
 import 'providers/documents_provider.dart';
 import 'providers/organization_provider.dart';
 
-
-
-
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   try {
     // تهيئة بيانات التاريخ العربية
     await initializeDateFormatting('ar', null);
-    
+
     // تهيئة قاعدة البيانات
     await DatabaseService.initialize();
-    
+
     // تهيئة خدمة التشفير
     await EncryptionService.initialize();
-    
+
     runApp(const MyApp());
   } catch (e) {
     // في حالة فشل التهيئة، عرض رسالة خطأ
     runApp(ErrorApp(error: e.toString()));
   }
-}class MyApp extends StatelessWidget {
+}
+
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
@@ -63,10 +61,7 @@ void main() async {
           ),
         ),
         locale: const Locale('ar'),
-        supportedLocales: const [
-          Locale('ar'),
-          Locale('en'),
-        ],
+        supportedLocales: const [Locale('ar'), Locale('en')],
         localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,

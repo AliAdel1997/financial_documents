@@ -7,7 +7,8 @@ import '../models/funding_models.dart';
 /// شاشة اختبار تفاعلية لـ FundingService
 class FundingServiceTestScreen extends StatefulWidget {
   @override
-  _FundingServiceTestScreenState createState() => _FundingServiceTestScreenState();
+  _FundingServiceTestScreenState createState() =>
+      _FundingServiceTestScreenState();
 }
 
 class _FundingServiceTestScreenState extends State<FundingServiceTestScreen> {
@@ -48,7 +49,7 @@ class _FundingServiceTestScreenState extends State<FundingServiceTestScreen> {
     setState(() {
       _logs.add('${DateTime.now().toString().substring(11, 19)} - $message');
     });
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -79,15 +80,17 @@ class _FundingServiceTestScreenState extends State<FundingServiceTestScreen> {
       return;
     }
 
-    setState(() { _isRunning = true; });
+    setState(() {
+      _isRunning = true;
+    });
 
     try {
       final success = await FundingService.reserveFunds(
         DatabaseService.isar,
         _selectedFunding!.id,
         amount,
-        description: _descriptionController.text.isEmpty 
-            ? null 
+        description: _descriptionController.text.isEmpty
+            ? null
             : _descriptionController.text,
       );
 
@@ -100,7 +103,9 @@ class _FundingServiceTestScreenState extends State<FundingServiceTestScreen> {
     } catch (e) {
       _addLog('❌ خطأ في عملية الحجز: $e');
     } finally {
-      setState(() { _isRunning = false; });
+      setState(() {
+        _isRunning = false;
+      });
     }
   }
 
@@ -117,15 +122,17 @@ class _FundingServiceTestScreenState extends State<FundingServiceTestScreen> {
       return;
     }
 
-    setState(() { _isRunning = true; });
+    setState(() {
+      _isRunning = true;
+    });
 
     try {
       final success = await FundingService.validateAndSpend(
         DatabaseService.isar,
         _selectedFunding!.id,
         amount,
-        description: _descriptionController.text.isEmpty 
-            ? null 
+        description: _descriptionController.text.isEmpty
+            ? null
             : _descriptionController.text,
       );
 
@@ -138,7 +145,9 @@ class _FundingServiceTestScreenState extends State<FundingServiceTestScreen> {
     } catch (e) {
       _addLog('❌ خطأ في عملية الصرف: $e');
     } finally {
-      setState(() { _isRunning = false; });
+      setState(() {
+        _isRunning = false;
+      });
     }
   }
 
@@ -155,15 +164,17 @@ class _FundingServiceTestScreenState extends State<FundingServiceTestScreen> {
       return;
     }
 
-    setState(() { _isRunning = true; });
+    setState(() {
+      _isRunning = true;
+    });
 
     try {
       final success = await FundingService.unreserveFunds(
         DatabaseService.isar,
         _selectedFunding!.id,
         amount,
-        description: _descriptionController.text.isEmpty 
-            ? null 
+        description: _descriptionController.text.isEmpty
+            ? null
             : _descriptionController.text,
       );
 
@@ -176,7 +187,9 @@ class _FundingServiceTestScreenState extends State<FundingServiceTestScreen> {
     } catch (e) {
       _addLog('❌ خطأ في عملية إلغاء الحجز: $e');
     } finally {
-      setState(() { _isRunning = false; });
+      setState(() {
+        _isRunning = false;
+      });
     }
   }
 
@@ -185,7 +198,9 @@ class _FundingServiceTestScreenState extends State<FundingServiceTestScreen> {
     if (_selectedFunding == null) return;
 
     try {
-      final updatedFunding = await DatabaseService.isar.institutionFundings.get(_selectedFunding!.id);
+      final updatedFunding = await DatabaseService.isar.institutionFundings.get(
+        _selectedFunding!.id,
+      );
       if (updatedFunding != null) {
         setState(() {
           _selectedFunding = updatedFunding;
@@ -208,7 +223,9 @@ class _FundingServiceTestScreenState extends State<FundingServiceTestScreen> {
       return;
     }
 
-    setState(() { _isRunning = true; });
+    setState(() {
+      _isRunning = true;
+    });
 
     try {
       _addLog('📊 عرض التقرير المفصل...');
@@ -220,13 +237,17 @@ class _FundingServiceTestScreenState extends State<FundingServiceTestScreen> {
     } catch (e) {
       _addLog('❌ خطأ في عرض التقرير: $e');
     } finally {
-      setState(() { _isRunning = false; });
+      setState(() {
+        _isRunning = false;
+      });
     }
   }
 
   /// تشغيل الأمثلة
   Future<void> _runExamples() async {
-    setState(() { _isRunning = true; });
+    setState(() {
+      _isRunning = true;
+    });
 
     try {
       _addLog('🚀 بدء تشغيل الأمثلة...');
@@ -236,7 +257,9 @@ class _FundingServiceTestScreenState extends State<FundingServiceTestScreen> {
     } catch (e) {
       _addLog('❌ خطأ في تشغيل الأمثلة: $e');
     } finally {
-      setState(() { _isRunning = false; });
+      setState(() {
+        _isRunning = false;
+      });
     }
   }
 
@@ -272,7 +295,10 @@ class _FundingServiceTestScreenState extends State<FundingServiceTestScreen> {
                 // اختيار سجل التمويل
                 Row(
                   children: [
-                    Text('سجل التمويل: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      'سجل التمويل: ',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     SizedBox(width: 8),
                     Expanded(
                       child: DropdownButton<InstitutionFunding>(
@@ -282,7 +308,9 @@ class _FundingServiceTestScreenState extends State<FundingServiceTestScreen> {
                         items: _fundings.map((funding) {
                           return DropdownMenuItem(
                             value: funding,
-                            child: Text('${funding.id} - ${funding.institutionId}/${funding.categoryId}'),
+                            child: Text(
+                              '${funding.id} - ${funding.institutionId}/${funding.categoryId}',
+                            ),
                           );
                         }).toList(),
                         onChanged: (value) {
@@ -294,9 +322,9 @@ class _FundingServiceTestScreenState extends State<FundingServiceTestScreen> {
                     ),
                   ],
                 ),
-                
+
                 SizedBox(height: 16),
-                
+
                 // عرض تفاصيل السجل المختار
                 if (_selectedFunding != null) ...[
                   Container(
@@ -311,19 +339,38 @@ class _FundingServiceTestScreenState extends State<FundingServiceTestScreen> {
                       children: [
                         Text(
                           'تفاصيل السجل المختار:',
-                          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue[800]),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue[800],
+                          ),
                         ),
                         SizedBox(height: 8),
                         Row(
                           children: [
-                            Expanded(child: Text('💰 المخصص: ${_selectedFunding!.allocatedAmount.toStringAsFixed(2)}')),
-                            Expanded(child: Text('🔒 المحجوز: ${_selectedFunding!.reservedAmount.toStringAsFixed(2)}')),
+                            Expanded(
+                              child: Text(
+                                '💰 المخصص: ${_selectedFunding!.allocatedAmount.toStringAsFixed(2)}',
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                '🔒 المحجوز: ${_selectedFunding!.reservedAmount.toStringAsFixed(2)}',
+                              ),
+                            ),
                           ],
                         ),
                         Row(
                           children: [
-                            Expanded(child: Text('💸 المصروف: ${_selectedFunding!.spentAmount.toStringAsFixed(2)}')),
-                            Expanded(child: Text('💎 المتبقي: ${_selectedFunding!.remainingAmount.toStringAsFixed(2)}')),
+                            Expanded(
+                              child: Text(
+                                '💸 المصروف: ${_selectedFunding!.spentAmount.toStringAsFixed(2)}',
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                '💎 المتبقي: ${_selectedFunding!.remainingAmount.toStringAsFixed(2)}',
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -331,7 +378,7 @@ class _FundingServiceTestScreenState extends State<FundingServiceTestScreen> {
                   ),
                   SizedBox(height: 16),
                 ],
-                
+
                 // مدخلات المبلغ والوصف
                 Row(
                   children: [
@@ -361,9 +408,9 @@ class _FundingServiceTestScreenState extends State<FundingServiceTestScreen> {
                     ),
                   ],
                 ),
-                
+
                 SizedBox(height: 16),
-                
+
                 // أزرار العمليات
                 Row(
                   children: [
@@ -404,9 +451,9 @@ class _FundingServiceTestScreenState extends State<FundingServiceTestScreen> {
                     ),
                   ],
                 ),
-                
+
                 SizedBox(height: 8),
-                
+
                 // أزرار التقارير والأمثلة
                 Row(
                   children: [
@@ -438,7 +485,7 @@ class _FundingServiceTestScreenState extends State<FundingServiceTestScreen> {
               ],
             ),
           ),
-          
+
           // منطقة اللوجز
           Expanded(
             child: Container(
@@ -478,7 +525,9 @@ class _FundingServiceTestScreenState extends State<FundingServiceTestScreen> {
                             height: 16,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.purple),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.purple,
+                              ),
                             ),
                           ),
                       ],
@@ -503,16 +552,20 @@ class _FundingServiceTestScreenState extends State<FundingServiceTestScreen> {
                             itemBuilder: (context, index) {
                               final log = _logs[index];
                               Color textColor = Colors.white;
-                              
+
                               if (log.contains('❌')) {
                                 textColor = Colors.red[300]!;
                               } else if (log.contains('✅')) {
                                 textColor = Colors.green[300]!;
-                              } else if (log.contains('🚀') || log.contains('⚡')) {
+                              } else if (log.contains('🚀') ||
+                                  log.contains('⚡')) {
                                 textColor = Colors.blue[300]!;
-                              } else if (log.contains('💰') || log.contains('🔒') || log.contains('💸')) {
+                              } else if (log.contains('💰') ||
+                                  log.contains('🔒') ||
+                                  log.contains('💸')) {
                                 textColor = Colors.yellow[300]!;
-                              } else if (log.contains('📊') || log.contains('📋')) {
+                              } else if (log.contains('📊') ||
+                                  log.contains('📋')) {
                                 textColor = Colors.purple[300]!;
                               }
 

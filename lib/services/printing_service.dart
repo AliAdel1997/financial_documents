@@ -26,7 +26,7 @@ class PrintBatchResult {
 
 class PrintingService {
   static const double _pageMargin = 20;
-  
+
   // متغيرات الخطوط العربية
   static pw.Font? _arabicFont;
   static pw.Font? _arabicBoldFont;
@@ -39,8 +39,9 @@ class PrintingService {
     try {
       // استخدام Google Fonts من مكتبة printing
       _arabicFont = await PdfGoogleFonts.cairoRegular();
-      _arabicBoldFont = await PdfGoogleFonts.cairoBold();
       
+      _arabicBoldFont = await PdfGoogleFonts.cairoBold();
+
       print('تم تحميل خطوط Cairo العربية من Google Fonts بنجاح');
       _fontsLoaded = true;
     } catch (e) {
@@ -48,7 +49,7 @@ class PrintingService {
         // محاولة استخدام خط Amiri العربي كبديل
         _arabicFont = await PdfGoogleFonts.amiriRegular();
         _arabicBoldFont = await PdfGoogleFonts.amiriBold();
-        
+
         print('تم تحميل خطوط Amiri العربية من Google Fonts بنجاح');
         _fontsLoaded = true;
       } catch (e2) {
@@ -56,7 +57,7 @@ class PrintingService {
           // محاولة استخدام Noto Sans Arabic
           _arabicFont = await PdfGoogleFonts.notoSansArabicRegular();
           _arabicBoldFont = await PdfGoogleFonts.notoSansArabicBold();
-          
+
           print('تم تحميل خطوط Noto Sans Arabic من Google Fonts بنجاح');
           _fontsLoaded = true;
         } catch (e3) {
@@ -78,7 +79,7 @@ class PrintingService {
   }) {
     // التأكد من تحميل الخطوط
     final font = bold ? _arabicBoldFont : _arabicFont;
-    
+
     if (font != null) {
       // استخدام الخط العربي المحمل
       return pw.TextStyle(
@@ -133,7 +134,7 @@ class PrintingService {
           'معاينة المستند ${document.outgoingNumber}',
           requireConfirmation,
         );
-        
+
         if (!shouldContinue) {
           return false; // المستخدم ألغى العملية
         }
@@ -225,7 +226,7 @@ class PrintingService {
     try {
       // محاولة اختيار طابعة
       final selectedPrinter = await Printing.pickPrinter(context: context);
-      
+
       if (selectedPrinter != null) {
         // طباعة مباشرة على الطابعة المحددة
         await Printing.directPrintPdf(
@@ -304,7 +305,7 @@ class PrintingService {
           'معاينة الدفعة $batchId (${documents.length} مستندات)',
           requireConfirmation,
         );
-        
+
         if (!shouldContinue) {
           // إلغاء الدفعة
           printBatch.status = PrintBatchStatus.cancelled;
@@ -325,11 +326,7 @@ class PrintingService {
       final finalPdf = await _createBatchPDF(documents, organization, true);
 
       // الطباعة
-      await _executePrint(
-        context,
-        finalPdf,
-        'دفعة المستندات $batchId',
-      );
+      await _executePrint(context, finalPdf, 'دفعة المستندات $batchId');
 
       // تحديث حالة المستندات والدفعة
       final now = DateTime.now();
@@ -355,9 +352,43 @@ class PrintingService {
         documentsCount: documents.length,
         message: 'تم طباعة ${documents.length} مستندات بنجاح',
       );
-
     } catch (e) {
       throw Exception('خطأ في طباعة عدة مستندات: $e');
+    }
+  }
+
+  /// عرض معاينة لدفعة من المستندات فقط (بدون طباعة نهائية)
+  static Future<bool> previewMultipleDocuments(
+    List<Document> documents,
+    BuildContext context, {
+    bool requireConfirmation = false,
+  }) async {
+    try {
+      await _loadArabicFonts();
+
+      if (documents.isEmpty) {
+        throw Exception('قائمة المستندات فارغة');
+      }
+
+      final organization = await DatabaseService.getMainOrganization();
+      if (organization == null) {
+        throw Exception('يرجى إعداد معلومات المؤسسة أولاً');
+      }
+
+      // إنشاء PDF للمعاينة (بدون تشفير)
+      final previewPdf = await _createBatchPDF(documents, organization, false);
+
+      // عرض المعاينة
+      final shouldContinue = await _showBatchPreview(
+        context,
+        previewPdf,
+        'معاينة الدفعة (${documents.length} مستندات)',
+        requireConfirmation,
+      );
+
+      return shouldContinue;
+    } catch (e) {
+      throw Exception('خطأ في عرض معاينة الدفعة: $e');
     }
   }
 
@@ -385,7 +416,10 @@ class PrintingService {
           children: [
             Text('هل تريد طباعة هذه الدفعة؟'),
             const SizedBox(height: 8),
-            Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -464,11 +498,11 @@ class PrintingService {
               // محتوى المستند
               _buildDocumentContent(
                 to: organization?.bankName ?? '',
-                subject: document.subject ?? '',  
+                subject: document.subject ?? '',
                 amount: document.amount.toString(),
                 amountInWords: document.amountInWords ?? '',
                 accountNumber: organization!.accountNumber ?? '',
-organizationaccountnumber: organization.accountNumber ?? '',
+                organizationaccountnumber: organization.accountNumber ?? '',
                 organizationIban: organization.iban ?? '',
                 recipientAddress: document.recipientAddress ?? '',
                 recipientIban: document.recipientIban ?? '',
@@ -485,8 +519,8 @@ organizationaccountnumber: organization.accountNumber ?? '',
               _buildDocumentFooter(
                 organization.directorName ?? '',
                 organization.jobTitle ?? '',
-               '','msc180271@gmail.com'
-              
+                '',
+                'msc180271@gmail.com',
               ),
             ],
           );
@@ -586,7 +620,7 @@ organizationaccountnumber: organization.accountNumber ?? '',
   //             textAlign: pw.TextAlign.center,
   //           ),
   //         ),
-          
+
   //         // خط فاصل
   //         pw.Container(
   //           width: 150,
@@ -594,7 +628,7 @@ organizationaccountnumber: organization.accountNumber ?? '',
   //           color: PdfColors.blue300,
   //           margin: const pw.EdgeInsets.symmetric(vertical: 8),
   //         ),
-          
+
   //         // عنوان المستند
   //         pw.Text(textDirection: pw.TextDirection.rtl,
   //           'كتاب تحويل مصرفي',
@@ -635,7 +669,7 @@ organizationaccountnumber: organization.accountNumber ?? '',
   //               pw.Text(textDirection: pw.TextDirection.rtl,
   //                 'رقم الصادر',
   //                 style: _getArabicTextStyle(
-  //                   fontSize: _bodyFontSize - 1, 
+  //                   fontSize: _bodyFontSize - 1,
   //                   bold: true,
   //                   color: PdfColors.green800,
   //                 ),
@@ -652,7 +686,7 @@ organizationaccountnumber: organization.accountNumber ?? '',
   //             ],
   //           ),
   //         ),
-          
+
   //         // التاريخ
   //         pw.Container(
   //           padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -667,7 +701,7 @@ organizationaccountnumber: organization.accountNumber ?? '',
   //               pw.Text(textDirection: pw.TextDirection.rtl,
   //                 'التاريخ',
   //                 style: _getArabicTextStyle(
-  //                   fontSize: _bodyFontSize - 1, 
+  //                   fontSize: _bodyFontSize - 1,
   //                   bold: true,
   //                   color: PdfColors.orange800,
   //                 ),
@@ -716,7 +750,7 @@ organizationaccountnumber: organization.accountNumber ?? '',
   //           child: pw.Text(textDirection: pw.TextDirection.rtl,
   //             'تفاصيل التحويل المصرفي',
   //             style: _getArabicTextStyle(
-  //               fontSize: _bodyFontSize + 1, 
+  //               fontSize: _bodyFontSize + 1,
   //               bold: true,
   //               color: PdfColors.white,
   //             ),
@@ -724,7 +758,7 @@ organizationaccountnumber: organization.accountNumber ?? '',
   //           ),
   //         ),
   //         pw.SizedBox(height: 16),
-          
+
   //         // المبلغ - صندوق مميز
   //         pw.Container(
   //           width: double.infinity,
@@ -739,7 +773,7 @@ organizationaccountnumber: organization.accountNumber ?? '',
   //               pw.Text(textDirection: pw.TextDirection.rtl,
   //                 'المبلغ المطلوب تحويله',
   //                 style: _getArabicTextStyle(
-  //                   fontSize: _bodyFontSize, 
+  //                   fontSize: _bodyFontSize,
   //                   bold: true,
   //                   color: PdfColors.green800,
   //                 ),
@@ -748,7 +782,7 @@ organizationaccountnumber: organization.accountNumber ?? '',
   //               pw.Text(textDirection: pw.TextDirection.rtl,
   //                 '${document.amount ?? 0} دينار عراقي',
   //                 style: _getArabicTextStyle(
-  //                   fontSize: _bodyFontSize + 3, 
+  //                   fontSize: _bodyFontSize + 3,
   //                   bold: true,
   //                   color: PdfColors.green900,
   //                 ),
@@ -767,9 +801,9 @@ organizationaccountnumber: organization.accountNumber ?? '',
   //             ],
   //           ),
   //         ),
-          
+
   //         pw.SizedBox(height: 16),
-          
+
   //         // معلومات الحسابات المصرفية
   //         pw.Container(
   //           padding: const pw.EdgeInsets.all(10),
@@ -784,7 +818,7 @@ organizationaccountnumber: organization.accountNumber ?? '',
   //               pw.Text(textDirection: pw.TextDirection.rtl,
   //                 'معلومات الحسابات المصرفية',
   //                 style: _getArabicTextStyle(
-  //                   fontSize: _bodyFontSize, 
+  //                   fontSize: _bodyFontSize,
   //                   bold: true,
   //                   color: PdfColors.indigo800,
   //                 ),
@@ -795,9 +829,9 @@ organizationaccountnumber: organization.accountNumber ?? '',
   //             ],
   //           ),
   //         ),
-          
+
   //         pw.SizedBox(height: 12),
-          
+
   //         // معلومات إضافية
   //         pw.Container(
   //           padding: const pw.EdgeInsets.all(10),
@@ -812,7 +846,7 @@ organizationaccountnumber: organization.accountNumber ?? '',
   //               pw.Text(textDirection: pw.TextDirection.rtl,
   //                 'معلومات إضافية',
   //                 style: _getArabicTextStyle(
-  //                   fontSize: _bodyFontSize, 
+  //                   fontSize: _bodyFontSize,
   //                   bold: true,
   //                   color: PdfColors.orange800,
   //                 ),
@@ -859,7 +893,7 @@ organizationaccountnumber: organization.accountNumber ?? '',
   //           color: PdfColors.grey400,
   //           margin: const pw.EdgeInsets.symmetric(vertical: 10),
   //         ),
-          
+
   //         // صف التوقيع والتاريخ
   //         pw.Row(
   //           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -905,9 +939,9 @@ organizationaccountnumber: organization.accountNumber ?? '',
   //             ),
   //           ],
   //         ),
-          
+
   //         pw.SizedBox(height: 20),
-          
+
   //         // معلومات المسؤول
   //         pw.Container(
   //           padding: const pw.EdgeInsets.all(10),
@@ -1009,211 +1043,234 @@ organizationaccountnumber: organization.accountNumber ?? '',
   ) async {
     // تحميل الخطوط العربية
     await _loadArabicFonts();
-    
+
     final organization = await DatabaseService.getMainOrganization();
     final pdfData = await _createDocumentPDF(document, organization, false);
-    
+
     await Printing.layoutPdf(
       onLayout: (PdfPageFormat format) async => pdfData,
       name: 'معاينة المستند ${document.outgoingNumber}',
     );
   }
 
-  /// معاينة مستندات متعددة بدون طباعة
-  static Future<void> previewMultipleDocuments(List<Document> documents) async {
-    if (documents.isEmpty) {
-      throw Exception('لا توجد مستندات للمعاينة');
-    }
+  
 
-    // تحميل الخطوط العربية
-    await _loadArabicFonts();
-    
-    final organization = await DatabaseService.getMainOrganization();
-    
-    // إنشاء PDF يحتوي على جميع المستندات
-    final pdf = pw.Document();
-    
-    for (int i = 0; i < documents.length; i++) {
-      final document = documents[i];
-      
-      // إضافة صفحة جديدة لكل مستند
-      pdf.addPage(
-        pw.Page(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(_pageMargin),
-          textDirection: pw.TextDirection.rtl,
-          build: (pw.Context context) {
-            return pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                // رأس المستند
-                _buildDocumentHeader(organization),
-                pw.SizedBox(height: 20),
-                
-                // معلومات المستند
-                _buildDocumentInfo(
-                  document.outgoingNumber?.toString() ?? 'غير محدد',
-                  document.documentDate?.toString().split(' ')[0] ?? '',
-                ),
-                pw.SizedBox(height: 15),
-                
-                // محتوى المستند
-                _buildDocumentContent(
-                  to: document.recipientAddress ?? 'غير محدد',
-                  subject: document.subject ?? 'غير محدد',
-                  amount: document.amount?.toString() ?? '0',
-                  amountInWords: document.amountInWords,
-                  accountNumber: organization?.accountNumber,
-                  organizationIban: organization?.iban,
-                  recipientAddress: document.recipientAddress,
-                  recipientIban: document.recipientIban,
-                  month: document.documentDate?.month.toString(),
-                  year: document.documentDate?.year.toString(),
-                  details: document.documentDetails,
-                ),
-                pw.Spacer(),
-                
-                // تذييل المستند
-                _buildDocumentFooter(
-                  organization?.directorName ?? '',
-                  organization?.jobTitle ?? '',
-                  organization?.departmentName ?? '',
-                  null, // لا يوجد إيميل في النموذج
-                ),
-                
-                // إضافة معلومات إضافية عن المعاينة
-                if (i < documents.length - 1) pw.SizedBox(height: 20),
-                pw.Align(
-                  alignment: pw.Alignment.centerLeft,
-                  child: pw.Text(
-                    'مستند ${i + 1} من ${documents.length}',
-                    style: _getArabicTextStyle(fontSize: 9),
-                  ),
-                ),
-              ],
-            );
-          },
+  static pw.Widget _buildDocumentHeader(
+    Organization? organization, {
+    Uint8List? logoBytes,
+  }) {
+    return pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        // يسار (English + org logo)
+        pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text(
+              "Ministry of Health and Environment",
+              style: _getArabicTextStyle(fontSize: 10),
+            ),
+            pw.Text(
+              "Babil Health Directorate",
+              style: _getArabicTextStyle(fontSize: 10),
+            ),
+            pw.Text(
+              "Mirjan Medical City",
+              style: _getArabicTextStyle(fontSize: 10),
+            ),
+            pw.SizedBox(height: 5),
+            if (logoBytes != null)
+              pw.Image(pw.MemoryImage(logoBytes), width: 50, height: 50),
+          ],
         ),
-      );
-    }
-    
-    final pdfData = await pdf.save();
-    
-    await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => pdfData,
-      name: 'معاينة ${documents.length} مستند',
+
+        // وسط (جمهورية العراق + شعار الجمهورية)
+        pw.Column(
+          children: [
+            pw.Text(
+              textDirection: pw.TextDirection.rtl,
+              "جمهورية العراق",
+              style: _getArabicTextStyle(fontSize: 12, bold: true),
+            ),
+            pw.SizedBox(height: 5),
+            // شعار الجمهورية من الأصول
+            // يجب تحميل الصورة مسبقاً وتمريرها هنا
+            if (logoBytes != null)
+              pw.Image(pw.MemoryImage(logoBytes), width: 60, height: 60),
+          ],
+        ),
+
+        // يمين (عربي)
+        pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.end,
+          children: [
+            pw.Text(
+              textDirection: pw.TextDirection.rtl,
+              "وزارة الصحة والبيئة",
+              style: _getArabicTextStyle(fontSize: 10),
+            ),
+            pw.Text(
+              textDirection: pw.TextDirection.rtl,
+              "دائرة صحة محافظة بابل",
+              style: _getArabicTextStyle(fontSize: 10),
+            ),
+            pw.Text(
+              textDirection: pw.TextDirection.rtl,
+              "مدينة مرجان الطبية",
+              style: _getArabicTextStyle(fontSize: 10),
+            ),
+            pw.Text(
+              textDirection: pw.TextDirection.rtl,
+              "شعبة الأمور الإدارية والمالية",
+              style: _getArabicTextStyle(fontSize: 10),
+            ),
+            pw.Text(
+              textDirection: pw.TextDirection.rtl,
+              "الحسابات",
+              style: _getArabicTextStyle(fontSize: 10),
+            ),
+          ],
+        ),
+      ],
     );
   }
-static pw.Widget _buildDocumentHeader(Organization? organization, {Uint8List? logoBytes}) {
-  return pw.Row(
-    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-    crossAxisAlignment: pw.CrossAxisAlignment.start,
-    children: [
-      // يسار (English + org logo)
-      pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Text("Ministry of Health and Environment",
-              style: _getArabicTextStyle(fontSize: 10)),
-          pw.Text("Babil Health Directorate",
-              style: _getArabicTextStyle(fontSize: 10)),
-          pw.Text("Mirjan Medical City",
-              style: _getArabicTextStyle(fontSize: 10)),
-          pw.SizedBox(height: 5),
-          if (logoBytes != null)
-            pw.Image(pw.MemoryImage(logoBytes), width: 50, height: 50),
-        ],
+
+  static pw.Widget _buildDocumentInfo(String number, String date) {
+    return pw.Align(
+      alignment: pw.Alignment.centerRight,
+      child: pw.Text(
+        textDirection: pw.TextDirection.rtl,
+        "العدد: $number    التاريخ: $date",
+        style: _getArabicTextStyle(fontSize: 11),
       ),
+    );
+  }
 
-      // وسط (جمهورية العراق + شعار الجمهورية)
-      pw.Column(
-        children: [
-          pw.Text(textDirection: pw.TextDirection.rtl,"جمهورية العراق",
-              style: _getArabicTextStyle(fontSize: 12, bold: true)),
-          pw.SizedBox(height: 5),
-          // شعار الجمهورية من الأصول
-          // يجب تحميل الصورة مسبقاً وتمريرها هنا
-          if (logoBytes != null)
-            pw.Image(pw.MemoryImage(logoBytes), width: 60, height: 60),
-        ],
-      ),
-
-      // يمين (عربي)
-      pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.end,
-        children: [
-          pw.Text(textDirection: pw.TextDirection.rtl,"وزارة الصحة والبيئة", style: _getArabicTextStyle(fontSize: 10)),
-          pw.Text(textDirection: pw.TextDirection.rtl,"دائرة صحة محافظة بابل", style: _getArabicTextStyle(fontSize: 10)),
-          pw.Text(textDirection: pw.TextDirection.rtl,"مدينة مرجان الطبية", style: _getArabicTextStyle(fontSize: 10)),
-          pw.Text(textDirection: pw.TextDirection.rtl,"شعبة الأمور الإدارية والمالية", style: _getArabicTextStyle(fontSize: 10)),
-          pw.Text(textDirection: pw.TextDirection.rtl,"الحسابات", style: _getArabicTextStyle(fontSize: 10)),
-        ],
-      ),
-    ],
-  );
-}
-
-static pw.Widget _buildDocumentInfo(String number, String date) {
-  return pw.Align(
-    alignment: pw.Alignment.centerRight,
-    child: pw.Text(textDirection: pw.TextDirection.rtl,"العدد: $number    التاريخ: $date",
-        style: _getArabicTextStyle(fontSize: 11)),
-  );
-}
-
-static pw.Widget _buildDocumentContent({String? to, String? subject, String? amount, String? amountInWords, String? accountNumber,
-    String? organizationIban,String? organizationaccountnumber, String? recipientAddress, String? recipientIban, String? month, String? year, String? details}) {
-  return pw.Column(
-    crossAxisAlignment: pw.CrossAxisAlignment.start,
-    children: [
-      pw.Text(textDirection: pw.TextDirection.rtl,"إلى: $to", style: _getArabicTextStyle(fontSize: 11)),
-      pw.Text(textDirection: pw.TextDirection.rtl,"الموضوع: $subject", style: _getArabicTextStyle(fontSize: 11)),
-      pw.SizedBox(height: 15),
-      pw.Text(textDirection: pw.TextDirection.rtl,"يرجى تحويل مبلغ وقدره ${amount}", style: _getArabicTextStyle(fontSize: 12)),
-      pw.SizedBox(height: 10),
-      pw.Text(textDirection: pw.TextDirection.rtl," من حسابنا الجاري المفتوع لديكم بالرقم : $accountNumber ", style: _getArabicTextStyle(fontSize: 11)),
-      pw.Text(textDirection: pw.TextDirection.rtl," IBAN:$organizationIban", style: _getArabicTextStyle(fontSize: 11)),
-      pw.Text(textDirection: pw.TextDirection.rtl,"إلى حساب: $recipientAddress", style: _getArabicTextStyle(fontSize: 11)),
-      pw.Text(textDirection: pw.TextDirection.rtl,"IBAN: $recipientIban", style: _getArabicTextStyle(fontSize: 11)),
-      pw.Text(textDirection: pw.TextDirection.rtl,"عن شهر: $month / $year", style: _getArabicTextStyle(fontSize: 11)),
-      pw.Text(textDirection: pw.TextDirection.rtl,"التفاصيل: $details", style: _getArabicTextStyle(fontSize: 11)),
-    ],
-  );
-}
-
-static pw.Widget _buildDocumentFooter(
-    String directorName, String directorTitle, String copyTo, String? email) {
-  return pw.Column(
-    children: [
-      pw.Align(
-        alignment: pw.Alignment.centerLeft,
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text(textDirection: pw.TextDirection.rtl,directorName, style: _getArabicTextStyle(fontSize: 12, bold: true)),
-            pw.Text(textDirection: pw.TextDirection.rtl,directorTitle, style: _getArabicTextStyle(fontSize: 11)),
-          ],
+  static pw.Widget _buildDocumentContent({
+    String? to,
+    String? subject,
+    String? amount,
+    String? amountInWords,
+    String? accountNumber,
+    String? organizationIban,
+    String? organizationaccountnumber,
+    String? recipientAddress,
+    String? recipientIban,
+    String? month,
+    String? year,
+    String? details,
+  }) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          textDirection: pw.TextDirection.rtl,
+          "إلى: $to",
+          style: _getArabicTextStyle(fontSize: 11),
         ),
-      ),
-      pw.SizedBox(height: 20),
-      pw.Align(
-        alignment: pw.Alignment.centerRight,
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text(textDirection: pw.TextDirection.rtl,"نسخة منه إلى:", style: _getArabicTextStyle(fontSize: 11, bold: true)),
-            pw.Text(textDirection: pw.TextDirection.rtl,copyTo, style: _getArabicTextStyle(fontSize: 11)),
-          ],
+        pw.Text(
+          textDirection: pw.TextDirection.rtl,
+          "الموضوع: $subject",
+          style: _getArabicTextStyle(fontSize: 11),
         ),
-      ),
-      pw.SizedBox(height: 15),
-      if (email != null)
+        pw.SizedBox(height: 15),
+        pw.Text(
+          textDirection: pw.TextDirection.rtl,
+          "يرجى تحويل مبلغ وقدره ${amount}",
+          style: _getArabicTextStyle(fontSize: 12),
+        ),
+        pw.SizedBox(height: 10),
+        pw.Text(
+          textDirection: pw.TextDirection.rtl,
+          " من حسابنا الجاري المفتوع لديكم بالرقم : $accountNumber ",
+          style: _getArabicTextStyle(fontSize: 11),
+        ),
+        pw.Text(
+          textDirection: pw.TextDirection.rtl,
+          " IBAN:$organizationIban",
+          style: _getArabicTextStyle(fontSize: 11),
+        ),
+        pw.Text(
+          textDirection: pw.TextDirection.rtl,
+          "إلى حساب: $recipientAddress",
+          style: _getArabicTextStyle(fontSize: 11),
+        ),
+        pw.Text(
+          textDirection: pw.TextDirection.rtl,
+          "IBAN: $recipientIban",
+          style: _getArabicTextStyle(fontSize: 11),
+        ),
+        pw.Text(
+          textDirection: pw.TextDirection.rtl,
+          "عن شهر: $month / $year",
+          style: _getArabicTextStyle(fontSize: 11),
+        ),
+        pw.Text(
+          textDirection: pw.TextDirection.rtl,
+          "التفاصيل: $details",
+          style: _getArabicTextStyle(fontSize: 11),
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _buildDocumentFooter(
+    String directorName,
+    String directorTitle,
+    String copyTo,
+    String? email,
+  ) {
+    return pw.Column(
+      children: [
         pw.Align(
-          alignment: pw.Alignment.center,
-          child: pw.Text(textDirection: pw.TextDirection.rtl,email, style: _getArabicTextStyle(fontSize: 10)),
+          alignment: pw.Alignment.centerLeft,
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                textDirection: pw.TextDirection.rtl,
+                directorName,
+                style: _getArabicTextStyle(fontSize: 12, bold: true),
+              ),
+              pw.Text(
+                textDirection: pw.TextDirection.rtl,
+                directorTitle,
+                style: _getArabicTextStyle(fontSize: 11),
+              ),
+            ],
+          ),
         ),
-    ],
-  );
-}
-
+        pw.SizedBox(height: 20),
+        pw.Align(
+          alignment: pw.Alignment.centerRight,
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                textDirection: pw.TextDirection.rtl,
+                "نسخة منه إلى:",
+                style: _getArabicTextStyle(fontSize: 11, bold: true),
+              ),
+              pw.Text(
+                textDirection: pw.TextDirection.rtl,
+                copyTo,
+                style: _getArabicTextStyle(fontSize: 11),
+              ),
+            ],
+          ),
+        ),
+        pw.SizedBox(height: 15),
+        if (email != null)
+          pw.Align(
+            alignment: pw.Alignment.center,
+            child: pw.Text(
+              textDirection: pw.TextDirection.rtl,
+              email,
+              style: _getArabicTextStyle(fontSize: 10),
+            ),
+          ),
+      ],
+    );
+  }
 }

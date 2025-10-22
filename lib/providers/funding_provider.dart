@@ -23,22 +23,24 @@ class FundingProvider with ChangeNotifier {
   List<FundingCategory> get fundingCategories => _fundingCategories;
   List<Institution> get institutions => _institutions;
   List<InstitutionFunding> get institutionFundings => _institutionFundings;
-  
+
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-  
+
   int? get selectedYear => _selectedYear;
   int? get selectedMonth => _selectedMonth;
   int? get selectedInstitutionId => _selectedInstitutionId;
   int? get selectedCategoryId => _selectedCategoryId;
 
   /// الأبواب التمويلية الرئيسية فقط
-  List<FundingCategory> get mainFundingCategories =>
-      _fundingCategories.where((category) => category.parentId == null).toList();
+  List<FundingCategory> get mainFundingCategories => _fundingCategories
+      .where((category) => category.parentId == null)
+      .toList();
 
   /// الأبواب التمويلية الفرعية لباب معين
-  List<FundingCategory> getSubCategories(int parentId) =>
-      _fundingCategories.where((category) => category.parentId == parentId).toList();
+  List<FundingCategory> getSubCategories(int parentId) => _fundingCategories
+      .where((category) => category.parentId == parentId)
+      .toList();
 
   /// تحديث حالة التحميل
   void _setLoading(bool loading) {
@@ -116,11 +118,11 @@ class FundingProvider with ChangeNotifier {
     try {
       _setLoading(true);
       _setError(null);
-      
+
       final id = await DatabaseService.addFundingCategory(category);
       category.id = id;
       _fundingCategories.add(category);
-      
+
       notifyListeners();
       return true;
     } catch (e) {
@@ -136,14 +138,14 @@ class FundingProvider with ChangeNotifier {
     try {
       _setLoading(true);
       _setError(null);
-      
+
       await DatabaseService.updateFundingCategory(category);
-      
+
       final index = _fundingCategories.indexWhere((c) => c.id == category.id);
       if (index != -1) {
         _fundingCategories[index] = category;
       }
-      
+
       notifyListeners();
       return true;
     } catch (e) {
@@ -159,7 +161,7 @@ class FundingProvider with ChangeNotifier {
     try {
       _setLoading(true);
       _setError(null);
-      
+
       final success = await DatabaseService.deleteFundingCategory(id);
       if (success) {
         _fundingCategories.removeWhere((category) => category.id == id);
@@ -183,11 +185,11 @@ class FundingProvider with ChangeNotifier {
     try {
       _setLoading(true);
       _setError(null);
-      
+
       final id = await DatabaseService.addInstitution(institution);
       institution.id = id;
       _institutions.add(institution);
-      
+
       notifyListeners();
       return true;
     } catch (e) {
@@ -203,14 +205,14 @@ class FundingProvider with ChangeNotifier {
     try {
       _setLoading(true);
       _setError(null);
-      
+
       await DatabaseService.updateInstitution(institution);
-      
+
       final index = _institutions.indexWhere((i) => i.id == institution.id);
       if (index != -1) {
         _institutions[index] = institution;
       }
-      
+
       notifyListeners();
       return true;
     } catch (e) {
@@ -226,7 +228,7 @@ class FundingProvider with ChangeNotifier {
     try {
       _setLoading(true);
       _setError(null);
-      
+
       final success = await DatabaseService.deleteInstitution(id);
       if (success) {
         _institutions.removeWhere((institution) => institution.id == id);
@@ -250,11 +252,11 @@ class FundingProvider with ChangeNotifier {
     try {
       _setLoading(true);
       _setError(null);
-      
+
       final id = await DatabaseService.addInstitutionFunding(funding);
       funding.id = id;
       _institutionFundings.add(funding);
-      
+
       notifyListeners();
       return true;
     } catch (e) {
@@ -270,14 +272,14 @@ class FundingProvider with ChangeNotifier {
     try {
       _setLoading(true);
       _setError(null);
-      
+
       await DatabaseService.updateInstitutionFunding(funding);
-      
+
       final index = _institutionFundings.indexWhere((f) => f.id == funding.id);
       if (index != -1) {
         _institutionFundings[index] = funding;
       }
-      
+
       notifyListeners();
       return true;
     } catch (e) {
@@ -293,7 +295,7 @@ class FundingProvider with ChangeNotifier {
     try {
       _setLoading(true);
       _setError(null);
-      
+
       final success = await DatabaseService.deleteInstitutionFunding(id);
       if (success) {
         _institutionFundings.removeWhere((funding) => funding.id == id);
@@ -358,11 +360,15 @@ class FundingProvider with ChangeNotifier {
     }
 
     if (_selectedInstitutionId != null) {
-      filtered = filtered.where((f) => f.institutionId == _selectedInstitutionId).toList();
+      filtered = filtered
+          .where((f) => f.institutionId == _selectedInstitutionId)
+          .toList();
     }
 
     if (_selectedCategoryId != null) {
-      filtered = filtered.where((f) => f.categoryId == _selectedCategoryId).toList();
+      filtered = filtered
+          .where((f) => f.categoryId == _selectedCategoryId)
+          .toList();
     }
 
     return filtered;
@@ -421,7 +427,9 @@ class FundingProvider with ChangeNotifier {
   }
 
   /// البحث في الأبواب التمويلية
-  Future<List<FundingCategory>> searchFundingCategories(String searchTerm) async {
+  Future<List<FundingCategory>> searchFundingCategories(
+    String searchTerm,
+  ) async {
     if (searchTerm.isEmpty) return _fundingCategories;
     return await DatabaseService.searchFundingCategories(searchTerm);
   }

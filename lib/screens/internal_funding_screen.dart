@@ -9,17 +9,16 @@ class InternalFundingScreen extends StatefulWidget {
   _InternalFundingScreenState createState() => _InternalFundingScreenState();
 }
 
-class _InternalFundingScreenState extends State<InternalFundingScreen> 
+class _InternalFundingScreenState extends State<InternalFundingScreen>
     with SingleTickerProviderStateMixin {
-  
   late TabController _tabController;
   bool _isLoading = false;
-  
+
   // قوائم البيانات
   List<FundingCategory> _categories = [];
   List<Institution> _institutions = [];
   List<InstitutionFunding> _fundings = [];
-  
+
   // المرشحات
   String _selectedFilterType = 'الكل';
   int _selectedFilterYear = DateTime.now().year;
@@ -44,9 +43,9 @@ class _InternalFundingScreenState extends State<InternalFundingScreen>
       await _loadData();
     } catch (e) {
       print('خطأ في تهيئة البيانات: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ في تحميل البيانات: $e'))
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('خطأ في تحميل البيانات: $e')));
     } finally {
       setState(() {
         _isLoading = false;
@@ -119,7 +118,7 @@ class _InternalFundingScreenState extends State<InternalFundingScreen>
         ..address = 'بابل - الحلة',
       Institution()
         ..name = 'مستشفى الحلة العام'
-        ..code = 'HGH001' 
+        ..code = 'HGH001'
         ..address = 'بابل - الحلة المركز',
       Institution()
         ..name = 'مستشفى المسيب العام'
@@ -135,30 +134,33 @@ class _InternalFundingScreenState extends State<InternalFundingScreen>
   List<InstitutionFunding> get _filteredFundings {
     return _fundings.where((funding) {
       // تصفية بنوع التمويل
-      if (_selectedFilterType != 'الكل' && funding.fundingType != _selectedFilterType) {
+      if (_selectedFilterType != 'الكل' &&
+          funding.fundingType != _selectedFilterType) {
         return false;
       }
-      
+
       // تصفية بالسنة
       if (funding.year != _selectedFilterYear) {
         return false;
       }
-      
+
       // تصفية بالشهر
       if (_selectedFilterMonth != 0 && funding.month != _selectedFilterMonth) {
         return false;
       }
-      
+
       // تصفية بالفئة
-      if (_selectedCategoryId != null && funding.categoryId != _selectedCategoryId) {
+      if (_selectedCategoryId != null &&
+          funding.categoryId != _selectedCategoryId) {
         return false;
       }
-      
+
       // تصفية بالمؤسسة
-      if (_selectedInstitutionId != null && funding.institutionId != _selectedInstitutionId) {
+      if (_selectedInstitutionId != null &&
+          funding.institutionId != _selectedInstitutionId) {
         return false;
       }
-      
+
       return true;
     }).toList();
   }
@@ -204,9 +206,7 @@ class _InternalFundingScreenState extends State<InternalFundingScreen>
     return Column(
       children: [
         _buildFilters(),
-        Expanded(
-          child: _buildAllocationsList(),
-        ),
+        Expanded(child: _buildAllocationsList()),
       ],
     );
   }
@@ -227,10 +227,10 @@ class _InternalFundingScreenState extends State<InternalFundingScreen>
                     border: OutlineInputBorder(),
                   ),
                   items: ['الكل', 'سنوي', 'شهري']
-                      .map((type) => DropdownMenuItem(
-                            value: type,
-                            child: Text(type),
-                          ))
+                      .map(
+                        (type) =>
+                            DropdownMenuItem(value: type, child: Text(type)),
+                      )
                       .toList(),
                   onChanged: (value) {
                     setState(() {
@@ -247,12 +247,15 @@ class _InternalFundingScreenState extends State<InternalFundingScreen>
                     labelText: 'السنة',
                     border: OutlineInputBorder(),
                   ),
-                  items: List.generate(5, (index) => DateTime.now().year - index)
-                      .map((year) => DropdownMenuItem(
-                            value: year,
-                            child: Text(year.toString()),
-                          ))
-                      .toList(),
+                  items:
+                      List.generate(5, (index) => DateTime.now().year - index)
+                          .map(
+                            (year) => DropdownMenuItem(
+                              value: year,
+                              child: Text(year.toString()),
+                            ),
+                          )
+                          .toList(),
                   onChanged: (value) {
                     setState(() {
                       _selectedFilterYear = value!;
@@ -273,11 +276,16 @@ class _InternalFundingScreenState extends State<InternalFundingScreen>
                     border: OutlineInputBorder(),
                   ),
                   items: [
-                    DropdownMenuItem<int?>(value: null, child: Text('جميع الأبواب')),
-                    ..._categories.map((category) => DropdownMenuItem(
-                          value: category.id,
-                          child: Text(category.name),
-                        )),
+                    DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text('جميع الأبواب'),
+                    ),
+                    ..._categories.map(
+                      (category) => DropdownMenuItem(
+                        value: category.id,
+                        child: Text(category.name),
+                      ),
+                    ),
                   ],
                   onChanged: (value) {
                     setState(() {
@@ -295,11 +303,16 @@ class _InternalFundingScreenState extends State<InternalFundingScreen>
                     border: OutlineInputBorder(),
                   ),
                   items: [
-                    DropdownMenuItem<int?>(value: null, child: Text('جميع المؤسسات')),
-                    ..._institutions.map((institution) => DropdownMenuItem(
-                          value: institution.id,
-                          child: Text(institution.name),
-                        )),
+                    DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text('جميع المؤسسات'),
+                    ),
+                    ..._institutions.map(
+                      (institution) => DropdownMenuItem(
+                        value: institution.id,
+                        child: Text(institution.name),
+                      ),
+                    ),
                   ],
                   onChanged: (value) {
                     setState(() {
@@ -317,7 +330,7 @@ class _InternalFundingScreenState extends State<InternalFundingScreen>
 
   Widget _buildAllocationsList() {
     final filteredFundings = _filteredFundings;
-    
+
     if (filteredFundings.isEmpty) {
       return Center(
         child: Column(
@@ -349,7 +362,7 @@ class _InternalFundingScreenState extends State<InternalFundingScreen>
       (cat) => cat.id == funding.categoryId,
       orElse: () => FundingCategory()..name = 'غير محدد',
     );
-    
+
     final institution = _institutions.firstWhere(
       (inst) => inst.id == funding.institutionId,
       orElse: () => Institution()..name = 'غير محدد',
@@ -424,10 +437,7 @@ class _InternalFundingScreenState extends State<InternalFundingScreen>
   Widget _buildAmountInfo(String label, double amount, Color color) {
     return Column(
       children: [
-        Text(
-          label,
-          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-        ),
+        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
         Text(
           '${amount.toStringAsFixed(0)} ر.س',
           style: TextStyle(
@@ -441,15 +451,11 @@ class _InternalFundingScreenState extends State<InternalFundingScreen>
   }
 
   Widget _buildReportsTab() {
-    return Center(
-      child: Text('تبويب التقارير - قيد التطوير'),
-    );
+    return Center(child: Text('تبويب التقارير - قيد التطوير'));
   }
 
   Widget _buildSettingsTab() {
-    return Center(
-      child: Text('تبويب الإعدادات - قيد التطوير'),
-    );
+    return Center(child: Text('تبويب الإعدادات - قيد التطوير'));
   }
 
   void _showAddAllocationDialog() {
@@ -467,16 +473,16 @@ class _InternalFundingScreenState extends State<InternalFundingScreen>
             year: allocation['year'],
             month: allocation['month'],
           );
-          
+
           if (success) {
             await _loadData();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('تم إضافة التخصيص بنجاح')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('تم إضافة التخصيص بنجاح')));
           } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('خطأ في إضافة التخصيص')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('خطأ في إضافة التخصيص')));
           }
         },
       ),
@@ -485,9 +491,9 @@ class _InternalFundingScreenState extends State<InternalFundingScreen>
 
   void _showEditAllocationDialog(InstitutionFunding funding) {
     // TODO: Implement edit dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('ميزة التعديل قيد التطوير')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('ميزة التعديل قيد التطوير')));
   }
 
   void _showDeleteConfirmation(InstitutionFunding funding) {
@@ -506,9 +512,9 @@ class _InternalFundingScreenState extends State<InternalFundingScreen>
               Navigator.pop(context);
               await DatabaseService.deleteInstitutionFunding(funding.id);
               await _loadData();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('تم حذف التخصيص بنجاح')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text('تم حذف التخصيص بنجاح')));
             },
             child: Text('حذف'),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -537,7 +543,7 @@ class _AllocationDialog extends StatefulWidget {
 class _AllocationDialogState extends State<_AllocationDialog> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
-  
+
   int? _selectedCategoryId;
   int? _selectedInstitutionId;
   String _selectedFundingType = 'سنوي';
@@ -562,17 +568,20 @@ class _AllocationDialogState extends State<_AllocationDialog> {
                   border: OutlineInputBorder(),
                 ),
                 items: widget.institutions
-                    .map((institution) => DropdownMenuItem(
-                          value: institution.id,
-                          child: Text(institution.name),
-                        ))
+                    .map(
+                      (institution) => DropdownMenuItem(
+                        value: institution.id,
+                        child: Text(institution.name),
+                      ),
+                    )
                     .toList(),
                 onChanged: (value) {
                   setState(() {
                     _selectedInstitutionId = value;
                   });
                 },
-                validator: (value) => value == null ? 'يرجى اختيار المؤسسة' : null,
+                validator: (value) =>
+                    value == null ? 'يرجى اختيار المؤسسة' : null,
               ),
               SizedBox(height: 16),
               DropdownButtonFormField<int>(
@@ -582,17 +591,20 @@ class _AllocationDialogState extends State<_AllocationDialog> {
                   border: OutlineInputBorder(),
                 ),
                 items: widget.categories
-                    .map((category) => DropdownMenuItem(
-                          value: category.id,
-                          child: Text(category.name),
-                        ))
+                    .map(
+                      (category) => DropdownMenuItem(
+                        value: category.id,
+                        child: Text(category.name),
+                      ),
+                    )
                     .toList(),
                 onChanged: (value) {
                   setState(() {
                     _selectedCategoryId = value;
                   });
                 },
-                validator: (value) => value == null ? 'يرجى اختيار الباب التمويلي' : null,
+                validator: (value) =>
+                    value == null ? 'يرجى اختيار الباب التمويلي' : null,
               ),
               SizedBox(height: 16),
               TextFormField(
@@ -625,10 +637,12 @@ class _AllocationDialogState extends State<_AllocationDialog> {
                         border: OutlineInputBorder(),
                       ),
                       items: ['سنوي', 'شهري']
-                          .map((type) => DropdownMenuItem(
-                                value: type,
-                                child: Text(type),
-                              ))
+                          .map(
+                            (type) => DropdownMenuItem(
+                              value: type,
+                              child: Text(type),
+                            ),
+                          )
                           .toList(),
                       onChanged: (value) {
                         setState(() {
@@ -648,12 +662,18 @@ class _AllocationDialogState extends State<_AllocationDialog> {
                         labelText: 'السنة',
                         border: OutlineInputBorder(),
                       ),
-                      items: List.generate(5, (index) => DateTime.now().year + index)
-                          .map((year) => DropdownMenuItem(
-                                value: year,
-                                child: Text(year.toString()),
-                              ))
-                          .toList(),
+                      items:
+                          List.generate(
+                                5,
+                                (index) => DateTime.now().year + index,
+                              )
+                              .map(
+                                (year) => DropdownMenuItem(
+                                  value: year,
+                                  child: Text(year.toString()),
+                                ),
+                              )
+                              .toList(),
                       onChanged: (value) {
                         setState(() {
                           _selectedYear = value!;
@@ -672,19 +692,22 @@ class _AllocationDialogState extends State<_AllocationDialog> {
                     border: OutlineInputBorder(),
                   ),
                   items: List.generate(12, (index) => index + 1)
-                      .map((month) => DropdownMenuItem(
-                            value: month,
-                            child: Text(_getMonthName(month)),
-                          ))
+                      .map(
+                        (month) => DropdownMenuItem(
+                          value: month,
+                          child: Text(_getMonthName(month)),
+                        ),
+                      )
                       .toList(),
                   onChanged: (value) {
                     setState(() {
                       _selectedMonth = value;
                     });
                   },
-                  validator: (value) => 
-                      _selectedFundingType == 'شهري' && value == null 
-                          ? 'يرجى اختيار الشهر' : null,
+                  validator: (value) =>
+                      _selectedFundingType == 'شهري' && value == null
+                      ? 'يرجى اختيار الشهر'
+                      : null,
                 ),
               ],
             ],
@@ -696,18 +719,26 @@ class _AllocationDialogState extends State<_AllocationDialog> {
           onPressed: () => Navigator.pop(context),
           child: Text('إلغاء'),
         ),
-        ElevatedButton(
-          onPressed: _save,
-          child: Text('حفظ'),
-        ),
+        ElevatedButton(onPressed: _save, child: Text('حفظ')),
       ],
     );
   }
 
   String _getMonthName(int month) {
     const monthNames = [
-      '', 'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+      '',
+      'يناير',
+      'فبراير',
+      'مارس',
+      'أبريل',
+      'مايو',
+      'يونيو',
+      'يوليو',
+      'أغسطس',
+      'سبتمبر',
+      'أكتوبر',
+      'نوفمبر',
+      'ديسمبر',
     ];
     return monthNames[month];
   }
@@ -715,7 +746,7 @@ class _AllocationDialogState extends State<_AllocationDialog> {
   void _save() {
     if (_formKey.currentState!.validate()) {
       final amount = double.parse(_amountController.text);
-      
+
       widget.onSave({
         'institutionId': _selectedInstitutionId!,
         'categoryId': _selectedCategoryId!,
@@ -724,7 +755,7 @@ class _AllocationDialogState extends State<_AllocationDialog> {
         'year': _selectedYear,
         'month': _selectedMonth,
       });
-      
+
       Navigator.pop(context);
     }
   }

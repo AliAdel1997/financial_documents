@@ -6,7 +6,6 @@ import '../services/database_service.dart';
 
 /// خدمة إدارة مرفقات التمويل
 class FundingAttachmentService {
-  
   /// رفع مرفق جديد
   static Future<FundingAttachment> uploadAttachment({
     required int fundingId,
@@ -35,11 +34,12 @@ class FundingAttachmentService {
         ..description = description;
 
       // حفظ في قاعدة البيانات
-      final savedAttachment = await DatabaseService.addFundingAttachment(attachment);
-      
+      final savedAttachment = await DatabaseService.addFundingAttachment(
+        attachment,
+      );
+
       print('تم رفع المرفق بنجاح: ${savedAttachment.fileName}');
       return savedAttachment;
-
     } catch (e) {
       print('خطأ في رفع المرفق: $e');
       rethrow;
@@ -52,10 +52,15 @@ class FundingAttachmentService {
   }
 
   /// حذف مرفق مع حذف الملف من النظام
-  static Future<bool> deleteAttachment(int attachmentId, {bool deleteFile = false}) async {
+  static Future<bool> deleteAttachment(
+    int attachmentId, {
+    bool deleteFile = false,
+  }) async {
     try {
       // الحصول على المرفق أولاً
-      final attachment = await DatabaseService.getFundingAttachment(attachmentId);
+      final attachment = await DatabaseService.getFundingAttachment(
+        attachmentId,
+      );
       if (attachment == null) {
         throw Exception('المرفق غير موجود');
       }
@@ -70,14 +75,15 @@ class FundingAttachmentService {
       }
 
       // حذف السجل من قاعدة البيانات
-      final deleted = await DatabaseService.deleteFundingAttachment(attachmentId);
-      
+      final deleted = await DatabaseService.deleteFundingAttachment(
+        attachmentId,
+      );
+
       if (deleted) {
         print('تم حذف المرفق بنجاح: ${attachment.fileName}');
       }
-      
-      return deleted;
 
+      return deleted;
     } catch (e) {
       print('خطأ في حذف المرفق: $e');
       return false;
@@ -86,11 +92,13 @@ class FundingAttachmentService {
 
   /// تحديث وصف المرفق
   static Future<FundingAttachment?> updateAttachmentDescription(
-    int attachmentId, 
-    String newDescription
+    int attachmentId,
+    String newDescription,
   ) async {
     try {
-      final attachment = await DatabaseService.getFundingAttachment(attachmentId);
+      final attachment = await DatabaseService.getFundingAttachment(
+        attachmentId,
+      );
       if (attachment == null) return null;
 
       final updatedAttachment = attachment.copyWith(
@@ -140,14 +148,16 @@ class FundingAttachmentService {
     }
   }
 
-  /// الحصول على أحدث المرفقات  
-  static Future<List<FundingAttachment>> getRecentAttachments({int limit = 10}) async {
+  /// الحصول على أحدث المرفقات
+  static Future<List<FundingAttachment>> getRecentAttachments({
+    int limit = 10,
+  }) async {
     final attachments = await DatabaseService.isar.fundingAttachments
         .filter()
         .uploadedAtIsNotNull()
         .sortByUploadedAtDesc()
         .findAll();
-    
+
     return attachments.take(limit).toList();
   }
 }

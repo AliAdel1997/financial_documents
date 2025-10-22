@@ -9,10 +9,10 @@ class FundingReportNode {
   final double spent;
   final double remaining;
   final List<FundingReportNode> children;
-  
+
   // معرف الفئة للمرجعية الداخلية
   final int categoryId;
-  
+
   // مستوى العمق في الشجرة (0 للجذر، 1 للمستوى الأول، إلخ)
   final int level;
 
@@ -31,7 +31,8 @@ class FundingReportNode {
   double get utilizationRate => allocated > 0 ? (spent / allocated) * 100 : 0;
 
   /// نسبة الحجز
-  double get reservationRate => allocated > 0 ? (reserved / allocated) * 100 : 0;
+  double get reservationRate =>
+      allocated > 0 ? (reserved / allocated) * 100 : 0;
 
   /// نسبة المتبقي
   double get remainingRate => allocated > 0 ? (remaining / allocated) * 100 : 0;
@@ -90,16 +91,26 @@ class FundingReportNode {
   void _buildTreeString(StringBuffer buffer, String prefix, bool isLast) {
     // رمز الاتصال
     final connector = isLast ? '└── ' : '├── ';
-    
+
     // معلومات العقدة
     buffer.writeln('$prefix$connector$categoryName');
-    buffer.writeln('$prefix${isLast ? "    " : "│   "}💰 المخصص: ${allocated.toStringAsFixed(2)}');
-    buffer.writeln('$prefix${isLast ? "    " : "│   "}🔒 المحجوز: ${reserved.toStringAsFixed(2)}');
-    buffer.writeln('$prefix${isLast ? "    " : "│   "}💸 المصروف: ${spent.toStringAsFixed(2)}');
-    buffer.writeln('$prefix${isLast ? "    " : "│   "}💎 المتبقي: ${remaining.toStringAsFixed(2)}');
-    
+    buffer.writeln(
+      '$prefix${isLast ? "    " : "│   "}💰 المخصص: ${allocated.toStringAsFixed(2)}',
+    );
+    buffer.writeln(
+      '$prefix${isLast ? "    " : "│   "}🔒 المحجوز: ${reserved.toStringAsFixed(2)}',
+    );
+    buffer.writeln(
+      '$prefix${isLast ? "    " : "│   "}💸 المصروف: ${spent.toStringAsFixed(2)}',
+    );
+    buffer.writeln(
+      '$prefix${isLast ? "    " : "│   "}💎 المتبقي: ${remaining.toStringAsFixed(2)}',
+    );
+
     if (children.isNotEmpty) {
-      buffer.writeln('$prefix${isLast ? "    " : "│   "}📊 نسبة الاستغلال: ${utilizationRate.toStringAsFixed(1)}%');
+      buffer.writeln(
+        '$prefix${isLast ? "    " : "│   "}📊 نسبة الاستغلال: ${utilizationRate.toStringAsFixed(1)}%',
+      );
     }
 
     // رسم الأطفال
@@ -107,22 +118,22 @@ class FundingReportNode {
       final child = children[i];
       final childPrefix = prefix + (isLast ? '    ' : '│   ');
       final isLastChild = i == children.length - 1;
-      
+
       if (i == 0) {
         buffer.writeln('$prefix${isLast ? "    " : "│   "}');
       }
-      
+
       child._buildTreeString(buffer, childPrefix, isLastChild);
     }
   }
 }
 
 /// توليد تقرير التمويل الهرمي
-/// 
+///
 /// [isar] مثيل قاعدة البيانات
 /// [institutionId] معرف المؤسسة للتصفية (اختياري)
 /// [year] السنة للتصفية (اختياري)
-/// 
+///
 /// يرجع قائمة بالعقد الجذرية للهيكل الشجري
 Future<List<FundingReportNode>> generateFundingReport(
   Isar isar, {
@@ -131,16 +142,20 @@ Future<List<FundingReportNode>> generateFundingReport(
 }) async {
   try {
     print('🚀 بدء توليد التقرير الهرمي...');
-    
+
     // الخطوة 1: جلب جميع سجلات التمويل
-    List<InstitutionFunding> allFundings = await isar.institutionFundings.where().findAll();
-    
+    List<InstitutionFunding> allFundings = await isar.institutionFundings
+        .where()
+        .findAll();
+
     // تطبيق المرشحات
     if (institutionId != null) {
-      allFundings = allFundings.where((f) => f.institutionId == institutionId).toList();
+      allFundings = allFundings
+          .where((f) => f.institutionId == institutionId)
+          .toList();
       print('🏥 مرشح المؤسسة: $institutionId (${allFundings.length} سجل)');
     }
-    
+
     if (year != null) {
       allFundings = allFundings.where((f) => f.year == year).toList();
       print('📅 مرشح السنة: $year (${allFundings.length} سجل)');
@@ -160,10 +175,10 @@ Future<List<FundingReportNode>> generateFundingReport(
 
     // الخطوة 3: تجميع البيانات حسب الفئة
     final categoryData = <int, _CategoryData>{};
-    
+
     for (final funding in allFundings) {
       final categoryId = funding.categoryId;
-      
+
       if (categoryData.containsKey(categoryId)) {
         // إضافة إلى البيانات الموجودة
         final existing = categoryData[categoryId]!;
@@ -192,7 +207,9 @@ Future<List<FundingReportNode>> generateFundingReport(
     final processedCategories = <int>{};
 
     // العثور على الفئات الجذرية (بدون parentId)
-    final rootCategories = allCategories.where((cat) => cat.parentId == null).toList();
+    final rootCategories = allCategories
+        .where((cat) => cat.parentId == null)
+        .toList();
     print('🌳 الفئات الجذرية: ${rootCategories.length}');
 
     for (final rootCategory in rootCategories) {
@@ -204,7 +221,7 @@ Future<List<FundingReportNode>> generateFundingReport(
         processedCategories,
         0, // مستوى الجذر
       );
-      
+
       if (node != null) {
         rootNodes.add(node);
         print('✅ تم بناء عقدة جذرية: ${rootCategory.name}');
@@ -212,10 +229,12 @@ Future<List<FundingReportNode>> generateFundingReport(
     }
 
     // التحقق من وجود فئات غير مرتبطة (orphaned)
-    final orphanedCategories = categoryData.keys.where((id) => !processedCategories.contains(id)).toList();
+    final orphanedCategories = categoryData.keys
+        .where((id) => !processedCategories.contains(id))
+        .toList();
     if (orphanedCategories.isNotEmpty) {
       print('⚠️ فئات غير مرتبطة: ${orphanedCategories.length}');
-      
+
       for (final orphanId in orphanedCategories) {
         final category = categoryMap[orphanId];
         if (category != null) {
@@ -237,12 +256,11 @@ Future<List<FundingReportNode>> generateFundingReport(
     }
 
     print('🎉 تم توليد التقرير بنجاح! العقد الجذرية: ${rootNodes.length}');
-    
+
     // طباعة ملخص
     _printReportSummary(rootNodes);
-    
-    return rootNodes;
 
+    return rootNodes;
   } catch (e) {
     print('❌ خطأ في توليد التقرير: $e');
     return [];
@@ -279,7 +297,7 @@ Future<FundingReportNode?> _buildCategoryNode(
       processedCategories,
       level + 1,
     );
-    
+
     if (childNode != null) {
       childNodes.add(childNode);
     }
@@ -322,7 +340,7 @@ Future<FundingReportNode?> _buildCategoryNode(
 
   // تسجيل المعالجة
   processedCategories.add(category.id);
-  
+
   return node;
 }
 
@@ -361,7 +379,9 @@ void _printReportSummary(List<FundingReportNode> rootNodes) {
   if (totalAllocated > 0) {
     final utilizationRate = (totalSpent / totalAllocated) * 100;
     final reservationRate = (totalReserved / totalAllocated) * 100;
-    print('📈 نسبة الاستغلال الإجمالية: ${utilizationRate.toStringAsFixed(1)}%');
+    print(
+      '📈 نسبة الاستغلال الإجمالية: ${utilizationRate.toStringAsFixed(1)}%',
+    );
     print('🔒 نسبة الحجز الإجمالية: ${reservationRate.toStringAsFixed(1)}%');
   }
 
@@ -382,7 +402,7 @@ void printDetailedFundingReport(List<FundingReportNode> rootNodes) {
   for (int i = 0; i < rootNodes.length; i++) {
     final node = rootNodes[i];
     print('\n${i + 1}. ${node.toTreeString()}');
-    
+
     if (i < rootNodes.length - 1) {
       print('${'─' * 50}');
     }
@@ -392,7 +412,10 @@ void printDetailedFundingReport(List<FundingReportNode> rootNodes) {
 }
 
 /// البحث في التقرير عن فئة معينة
-FundingReportNode? findNodeInReport(List<FundingReportNode> rootNodes, String categoryName) {
+FundingReportNode? findNodeInReport(
+  List<FundingReportNode> rootNodes,
+  String categoryName,
+) {
   for (final node in rootNodes) {
     final found = _searchNodeRecursive(node, categoryName);
     if (found != null) {
@@ -402,18 +425,21 @@ FundingReportNode? findNodeInReport(List<FundingReportNode> rootNodes, String ca
   return null;
 }
 
-FundingReportNode? _searchNodeRecursive(FundingReportNode node, String categoryName) {
+FundingReportNode? _searchNodeRecursive(
+  FundingReportNode node,
+  String categoryName,
+) {
   if (node.categoryName.toLowerCase().contains(categoryName.toLowerCase())) {
     return node;
   }
-  
+
   for (final child in node.children) {
     final found = _searchNodeRecursive(child, categoryName);
     if (found != null) {
       return found;
     }
   }
-  
+
   return null;
 }
 
@@ -424,10 +450,16 @@ Map<String, dynamic> exportReportToJson(List<FundingReportNode> rootNodes) {
     'totalRootNodes': rootNodes.length,
     'totalNodes': rootNodes.fold(0, (sum, node) => sum + node.totalNodesCount),
     'summary': {
-      'totalAllocated': rootNodes.fold(0.0, (sum, node) => sum + node.allocated),
+      'totalAllocated': rootNodes.fold(
+        0.0,
+        (sum, node) => sum + node.allocated,
+      ),
       'totalReserved': rootNodes.fold(0.0, (sum, node) => sum + node.reserved),
       'totalSpent': rootNodes.fold(0.0, (sum, node) => sum + node.spent),
-      'totalRemaining': rootNodes.fold(0.0, (sum, node) => sum + node.remaining),
+      'totalRemaining': rootNodes.fold(
+        0.0,
+        (sum, node) => sum + node.remaining,
+      ),
     },
     'categories': rootNodes.map((node) => _nodeToJson(node)).toList(),
   };
@@ -462,17 +494,18 @@ List<FundingReportNode> filterReport(
     if (minAllocated != null && node.allocated < minAllocated) {
       return false;
     }
-    
+
     // فلتر نسبة الاستغلال الأدنى
-    if (minUtilizationRate != null && node.utilizationRate < minUtilizationRate) {
+    if (minUtilizationRate != null &&
+        node.utilizationRate < minUtilizationRate) {
       return false;
     }
-    
+
     // فلتر عرض الفئات التي لها تمويل فقط
     if (showOnlyWithFunding && node.allocated == 0) {
       return false;
     }
-    
+
     return true;
   }).toList();
 }

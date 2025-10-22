@@ -4,7 +4,6 @@ import '../models/funding_models.dart';
 
 /// أمثلة عملية لاستخدام FundingService
 class FundingServiceExamples {
-  
   /// مثال شامل على استخدام جميع وظائف FundingService
   static Future<void> runCompleteExample() async {
     print('🚀 بدء تشغيل أمثلة FundingService...\n');
@@ -15,23 +14,23 @@ class FundingServiceExamples {
 
     // إنشاء بيانات تجريبية
     await _setupTestData();
-    
+
     // أمثلة على عمليات الحجز والصرف
     await _demonstrateReservationAndSpending(isar);
-    
+
     // أمثلة على التقارير المفصلة
     await _demonstrateReporting(isar);
-    
+
     // اختبار حالات الخطأ
     await _testErrorCases(isar);
-    
+
     print('✅ تم الانتهاء من جميع أمثلة FundingService!');
   }
 
   /// إعداد بيانات تجريبية للاختبار
   static Future<void> _setupTestData() async {
     print('📋 إعداد البيانات التجريبية...');
-    
+
     // إنشاء مؤسسة تجريبية
     final testInstitution = Institution()
       ..name = 'مستشفى الاختبار'
@@ -65,7 +64,7 @@ class FundingServiceExamples {
 
     final fundingId = await DatabaseService.addInstitutionFunding(testFunding);
     print('✅ تم إنشاء سجل تمويل تجريبي بالمعرف: $fundingId');
-    
+
     print('✅ تم الانتهاء من إعداد البيانات التجريبية\n');
   }
 
@@ -82,7 +81,7 @@ class FundingServiceExamples {
     }
 
     final testFundingId = fundings.last.id; // استخدام آخر سجل تم إنشاؤه
-    
+
     print('\n📊 حالة التمويل قبل العمليات:');
     await FundingService.printFundingReport(isar, testFundingId);
 
@@ -94,7 +93,7 @@ class FundingServiceExamples {
       150000.0,
       description: 'حجز لمشتريات طبية',
     );
-    
+
     if (reserveSuccess1) {
       print('✅ تم حجز المبلغ الأول بنجاح');
     }
@@ -107,7 +106,7 @@ class FundingServiceExamples {
       100000.0,
       description: 'حجز لصيانة الأجهزة',
     );
-    
+
     if (reserveSuccess2) {
       print('✅ تم حجز المبلغ الثاني بنجاح');
     }
@@ -123,7 +122,7 @@ class FundingServiceExamples {
       80000.0,
       description: 'شراء أدوية ومستلزمات',
     );
-    
+
     if (spendSuccess1) {
       print('✅ تم صرف المبلغ الأول بنجاح');
     }
@@ -136,7 +135,7 @@ class FundingServiceExamples {
       120000.0,
       description: 'دفع فواتير الصيانة',
     );
-    
+
     if (spendSuccess2) {
       print('✅ تم صرف المبلغ الثاني بنجاح');
     }
@@ -152,7 +151,7 @@ class FundingServiceExamples {
       30000.0,
       description: 'إلغاء حجز - تغيير في الخطة',
     );
-    
+
     if (unreserveSuccess) {
       print('✅ تم إلغاء حجز المبلغ بنجاح');
     }
@@ -169,13 +168,13 @@ class FundingServiceExamples {
     print('═══════════════════════════════════════════════');
 
     final fundings = await DatabaseService.getAllInstitutionFunding();
-    
+
     for (final funding in fundings) {
       print('\n📋 تفاصيل التمويل ${funding.id}:');
-      
+
       // جلب التفاصيل المحسوبة
       final details = await FundingService.getFundingDetails(isar, funding.id);
-      
+
       if (details != null) {
         print('🏥 المؤسسة: ${details.institutionName}');
         print('💰 الباب: ${details.categoryName}');
@@ -183,17 +182,27 @@ class FundingServiceExamples {
         print('🔒 المحجوز: ${details.funding.reservedAmount}');
         print('💸 المصروف: ${details.funding.spentAmount}');
         print('🟢 المتاح: ${details.availableAmount}');
-        print('📊 نسبة الاستغلال: ${details.utilizationRate.toStringAsFixed(1)}%');
+        print(
+          '📊 نسبة الاستغلال: ${details.utilizationRate.toStringAsFixed(1)}%',
+        );
         print('🔒 نسبة الحجز: ${details.reservationRate.toStringAsFixed(1)}%');
-        
+
         // اختبار إمكانية العمليات
-        final canSpend50k = await FundingService.canSpend(isar, funding.id, 50000.0);
-        final canReserve50k = await FundingService.canReserve(isar, funding.id, 50000.0);
-        
+        final canSpend50k = await FundingService.canSpend(
+          isar,
+          funding.id,
+          50000.0,
+        );
+        final canReserve50k = await FundingService.canReserve(
+          isar,
+          funding.id,
+          50000.0,
+        );
+
         print('💸 يمكن صرف 50,000: ${canSpend50k ? "نعم" : "لا"}');
         print('🔒 يمكن حجز 50,000: ${canReserve50k ? "نعم" : "لا"}');
       }
-      
+
       print('─' * 50);
     }
 
@@ -207,7 +216,7 @@ class FundingServiceExamples {
 
     final fundings = await DatabaseService.getAllInstitutionFunding();
     if (fundings.isEmpty) return;
-    
+
     final testFundingId = fundings.first.id;
 
     // 1. محاولة صرف مبلغ أكبر من المحجوز
@@ -275,7 +284,7 @@ class FundingServiceExamples {
 
     // البحث عن سجل تمويل موجود
     final fundings = await DatabaseService.getAllInstitutionFunding();
-    
+
     if (fundings.isEmpty) {
       print('❌ لا توجد سجلات تمويل. قم بإنشاء البيانات التجريبية أولاً.');
       return;
@@ -408,7 +417,9 @@ class FundingServiceExamples {
       ..createdAt = DateTime.now()
       ..updatedAt = DateTime.now();
 
-    final categoryId = await DatabaseService.addFundingCategory(medicalEquipment);
+    final categoryId = await DatabaseService.addFundingCategory(
+      medicalEquipment,
+    );
 
     final funding = InstitutionFunding()
       ..institutionId = hospitalId

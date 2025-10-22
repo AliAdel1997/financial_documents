@@ -3,13 +3,12 @@ import 'database_service.dart';
 
 /// مدير التمويل - كلاس متقدم لإدارة العمليات المالية والفئات
 class FundingManager {
-  
   /// إضافة باب تمويلي جديد (رئيسي أو فرعي)
-  /// 
+  ///
   /// [name] اسم الباب الجديد
   /// [description] وصف الباب
   /// [parentId] معرف الباب الأعلى (null للباب الرئيسي)
-  /// 
+  ///
   /// يرجع معرف الباب الجديد أو null في حالة الفشل
   static Future<int?> addFundingCategory(
     String name, {
@@ -24,21 +23,23 @@ class FundingManager {
 
       // التحقق من وجود الباب الأعلى إذا تم تحديده
       if (parentId != null) {
-        final parentCategory = await DatabaseService.getFundingCategoryById(parentId);
+        final parentCategory = await DatabaseService.getFundingCategoryById(
+          parentId,
+        );
         if (parentCategory == null) {
           throw ArgumentError('الباب الأعلى غير موجود (ID: $parentId)');
         }
       }
 
       // التحقق من عدم تكرار الاسم في نفس المستوى
-      final existingCategories = parentId == null 
+      final existingCategories = parentId == null
           ? await DatabaseService.getMainFundingCategories()
           : await DatabaseService.getSubFundingCategories(parentId);
-      
+
       final nameExists = existingCategories.any(
-        (category) => category.name.toLowerCase() == name.toLowerCase()
+        (category) => category.name.toLowerCase() == name.toLowerCase(),
       );
-      
+
       if (nameExists) {
         throw ArgumentError('يوجد باب بنفس الاسم في هذا المستوى');
       }
@@ -71,14 +72,16 @@ class FundingManager {
       }
 
       // التحقق من عدم تكرار الاسم في نفس المستوى
-      final existingCategories = category.parentId == null 
+      final existingCategories = category.parentId == null
           ? await DatabaseService.getMainFundingCategories()
           : await DatabaseService.getSubFundingCategories(category.parentId!);
-      
+
       final nameExists = existingCategories.any(
-        (cat) => cat.id != categoryId && cat.name.toLowerCase() == name.toLowerCase()
+        (cat) =>
+            cat.id != categoryId &&
+            cat.name.toLowerCase() == name.toLowerCase(),
       );
-      
+
       if (nameExists) {
         throw ArgumentError('يوجد باب بنفس الاسم في هذا المستوى');
       }
@@ -104,13 +107,16 @@ class FundingManager {
   static Future<bool> deleteFundingCategory(int categoryId) async {
     try {
       // التحقق من وجود أبواب فرعية
-      final subCategories = await DatabaseService.getSubFundingCategories(categoryId);
+      final subCategories = await DatabaseService.getSubFundingCategories(
+        categoryId,
+      );
       if (subCategories.isNotEmpty) {
         throw ArgumentError('لا يمكن حذف الباب لوجود أبواب فرعية تابعة له');
       }
 
       // التحقق من وجود تمويلات مرتبطة
-      final linkedFundings = await DatabaseService.getInstitutionFundingByCategory(categoryId);
+      final linkedFundings =
+          await DatabaseService.getInstitutionFundingByCategory(categoryId);
       if (linkedFundings.isNotEmpty) {
         throw ArgumentError('لا يمكن حذف الباب لوجود تمويلات مرتبطة به');
       }
@@ -129,12 +135,13 @@ class FundingManager {
     final List<CategoryHierarchy> hierarchy = [];
 
     for (final category in mainCategories) {
-      final subCategories = await DatabaseService.getSubFundingCategories(category.id);
-      
-      hierarchy.add(CategoryHierarchy(
-        category: category,
-        subCategories: subCategories,
-      ));
+      final subCategories = await DatabaseService.getSubFundingCategories(
+        category.id,
+      );
+
+      hierarchy.add(
+        CategoryHierarchy(category: category, subCategories: subCategories),
+      );
     }
 
     return hierarchy;
@@ -158,14 +165,16 @@ class FundingManager {
       print('fundingType: $fundingType');
       print('year: $year');
       print('month: $month');
-      
+
       if (amount <= 0) {
         throw ArgumentError('المبلغ يجب أن يكون أكبر من صفر');
       }
 
       // التحقق من وجود المؤسسة والفئة
       print('التحقق من وجود المؤسسة...');
-      final institution = await DatabaseService.getInstitutionById(institutionId);
+      final institution = await DatabaseService.getInstitutionById(
+        institutionId,
+      );
       if (institution == null) {
         print('المؤسسة غير موجودة: $institutionId');
         throw ArgumentError('المؤسسة غير موجودة');
@@ -206,50 +215,74 @@ class FundingManager {
   }
 
   /// الحصول على إجمالي التخصيصات لفئة معينة
-  static Future<double> getTotalAllocatedForCategory(int categoryId, {int? year}) async {
-    final fundings = await DatabaseService.getInstitutionFundingByCategory(categoryId);
-    
+  static Future<double> getTotalAllocatedForCategory(
+    int categoryId, {
+    int? year,
+  }) async {
+    final fundings = await DatabaseService.getInstitutionFundingByCategory(
+      categoryId,
+    );
+
     double total = 0.0;
     for (final funding in fundings) {
       if (year == null || funding.year == year) {
         total += funding.allocatedAmount;
       }
     }
-    
+
     return total;
   }
 
   /// الحصول على إجمالي المصروف لفئة معينة
-  static Future<double> getTotalSpentForCategory(int categoryId, {int? year}) async {
-    final fundings = await DatabaseService.getInstitutionFundingByCategory(categoryId);
-    
+  static Future<double> getTotalSpentForCategory(
+    int categoryId, {
+    int? year,
+  }) async {
+    final fundings = await DatabaseService.getInstitutionFundingByCategory(
+      categoryId,
+    );
+
     double total = 0.0;
     for (final funding in fundings) {
       if (year == null || funding.year == year) {
         total += funding.spentAmount;
       }
     }
-    
+
     return total;
   }
 
   /// الحصول على المتبقي لفئة معينة
-  static Future<double> getRemainingForCategory(int categoryId, {int? year}) async {
-    final allocated = await getTotalAllocatedForCategory(categoryId, year: year);
+  static Future<double> getRemainingForCategory(
+    int categoryId, {
+    int? year,
+  }) async {
+    final allocated = await getTotalAllocatedForCategory(
+      categoryId,
+      year: year,
+    );
     final spent = await getTotalSpentForCategory(categoryId, year: year);
     return allocated - spent;
   }
 
   /// إنشاء تقرير ملخص للفئة
-  static Future<CategorySummary> getCategorySummary(int categoryId, {int? year}) async {
+  static Future<CategorySummary> getCategorySummary(
+    int categoryId, {
+    int? year,
+  }) async {
     final category = await DatabaseService.getFundingCategoryById(categoryId);
     if (category == null) {
       throw ArgumentError('الفئة غير موجودة');
     }
 
-    final totalAllocated = await getTotalAllocatedForCategory(categoryId, year: year);
+    final totalAllocated = await getTotalAllocatedForCategory(
+      categoryId,
+      year: year,
+    );
     final totalSpent = await getTotalSpentForCategory(categoryId, year: year);
-    final fundings = await DatabaseService.getInstitutionFundingByCategory(categoryId);
+    final fundings = await DatabaseService.getInstitutionFundingByCategory(
+      categoryId,
+    );
 
     return CategorySummary(
       category: category,
@@ -267,10 +300,7 @@ class CategoryHierarchy {
   final FundingCategory category;
   final List<FundingCategory> subCategories;
 
-  CategoryHierarchy({
-    required this.category,
-    required this.subCategories,
-  });
+  CategoryHierarchy({required this.category, required this.subCategories});
 }
 
 /// كلاس لتمثيل ملخص الفئة
@@ -291,7 +321,7 @@ class CategorySummary {
     required this.fundings,
   });
 
-  double get spentPercentage => 
+  double get spentPercentage =>
       totalAllocated > 0 ? (totalSpent / totalAllocated) * 100 : 0;
 
   double get remainingPercentage =>

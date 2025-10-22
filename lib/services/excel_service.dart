@@ -109,7 +109,7 @@ class ExcelService {
         departmentIban: null, // سيتم ملئها من بيانات المؤسسة
         recipientIban: null, // سيتم ملئها من بيانات الجهة
         recipientAddress: recipientName.trim(), // استخدام اسم الجهة كعنوان مؤقت
-        documentDetails: notes?.trim().isNotEmpty == true 
+        documentDetails: notes?.trim().isNotEmpty == true
             ? 'استقطاع لصالح: ${recipientName.trim()} - ${notes!.trim()}'
             : 'استقطاع لصالح: ${recipientName.trim()}',
         status: DocumentStatus.draft,
@@ -369,18 +369,18 @@ class ExcelService {
     try {
       // إنشاء Excel جديد
       final excel = Excel.createExcel();
-      
+
       // الحصول على الورقة الافتراضية أو إنشاء جديدة
       const sheetName = 'قالب المستندات';
       final defaultSheet = excel.getDefaultSheet();
-      
+
       Sheet sheet;
       if (defaultSheet != null) {
         sheet = excel.tables[defaultSheet]!;
         // مسح الورقة الافتراضية
         excel.delete(defaultSheet);
       }
-      
+
       // إنشاء ورقة جديدة
       sheet = excel[sheetName];
 
@@ -389,26 +389,92 @@ class ExcelService {
       // إضافة معلومات المؤسسة (إن وجدت)
       if (organization != null) {
         // عنوان التوضيح
-        var cell = sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: currentRow));
+        var cell = sheet.cell(
+          CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: currentRow),
+        );
         cell.value = 'معلومات الدائرة:';
         cell.cellStyle = CellStyle(bold: true, fontSize: 14);
         currentRow++;
 
         // معلومات الدائرة
-        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: currentRow)).value = 'اسم الدائرة:';
-        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: currentRow)).value = organization.departmentName ?? '';
+        sheet
+                .cell(
+                  CellIndex.indexByColumnRow(
+                    columnIndex: 0,
+                    rowIndex: currentRow,
+                  ),
+                )
+                .value =
+            'اسم الدائرة:';
+        sheet
+                .cell(
+                  CellIndex.indexByColumnRow(
+                    columnIndex: 1,
+                    rowIndex: currentRow,
+                  ),
+                )
+                .value =
+            organization.departmentName ?? '';
         currentRow++;
 
-        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: currentRow)).value = 'اسم المصرف:';
-        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: currentRow)).value = organization.bankName ?? '';
+        sheet
+                .cell(
+                  CellIndex.indexByColumnRow(
+                    columnIndex: 0,
+                    rowIndex: currentRow,
+                  ),
+                )
+                .value =
+            'اسم المصرف:';
+        sheet
+                .cell(
+                  CellIndex.indexByColumnRow(
+                    columnIndex: 1,
+                    rowIndex: currentRow,
+                  ),
+                )
+                .value =
+            organization.bankName ?? '';
         currentRow++;
 
-        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: currentRow)).value = 'الايبان:';
-        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: currentRow)).value = organization.iban ?? '';
+        sheet
+                .cell(
+                  CellIndex.indexByColumnRow(
+                    columnIndex: 0,
+                    rowIndex: currentRow,
+                  ),
+                )
+                .value =
+            'الايبان:';
+        sheet
+                .cell(
+                  CellIndex.indexByColumnRow(
+                    columnIndex: 1,
+                    rowIndex: currentRow,
+                  ),
+                )
+                .value =
+            organization.iban ?? '';
         currentRow++;
 
-        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: currentRow)).value = 'اسم المدير:';
-        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: currentRow)).value = organization.directorName ?? '';
+        sheet
+                .cell(
+                  CellIndex.indexByColumnRow(
+                    columnIndex: 0,
+                    rowIndex: currentRow,
+                  ),
+                )
+                .value =
+            'اسم المدير:';
+        sheet
+                .cell(
+                  CellIndex.indexByColumnRow(
+                    columnIndex: 1,
+                    rowIndex: currentRow,
+                  ),
+                )
+                .value =
+            organization.directorName ?? '';
         currentRow++;
 
         // إضافة صف فارغ
@@ -416,7 +482,9 @@ class ExcelService {
       }
 
       // إضافة تعليمات الاستخدام
-      var instructionCell = sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: currentRow));
+      var instructionCell = sheet.cell(
+        CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: currentRow),
+      );
       instructionCell.value = 'تعليمات الاستخدام:';
       instructionCell.cellStyle = CellStyle(bold: true, fontSize: 14);
       currentRow++;
@@ -431,7 +499,9 @@ class ExcelService {
       ];
 
       for (var instruction in instructions) {
-        var cell = sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: currentRow));
+        var cell = sheet.cell(
+          CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: currentRow),
+        );
         cell.value = instruction;
         cell.cellStyle = CellStyle(fontSize: 10);
         currentRow++;
@@ -442,7 +512,9 @@ class ExcelService {
 
       // إضافة عناوين الأعمدة
       for (int i = 0; i < _documentHeaders.length; i++) {
-        var cell = sheet.cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: currentRow));
+        var cell = sheet.cell(
+          CellIndex.indexByColumnRow(columnIndex: i, rowIndex: currentRow),
+        );
         cell.value = _documentHeaders[i];
         cell.cellStyle = CellStyle(
           bold: true,
@@ -460,8 +532,14 @@ class ExcelService {
       ];
 
       // إضافة البيانات التجريبية
-      for (int colIdx = 0; colIdx < sampleData.length && colIdx < _documentHeaders.length; colIdx++) {
-        var cell = sheet.cell(CellIndex.indexByColumnRow(columnIndex: colIdx, rowIndex: currentRow));
+      for (
+        int colIdx = 0;
+        colIdx < sampleData.length && colIdx < _documentHeaders.length;
+        colIdx++
+      ) {
+        var cell = sheet.cell(
+          CellIndex.indexByColumnRow(columnIndex: colIdx, rowIndex: currentRow),
+        );
         cell.value = sampleData[colIdx];
         cell.cellStyle = CellStyle(
           fontSize: 10,

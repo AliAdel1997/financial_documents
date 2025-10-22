@@ -2,18 +2,45 @@ import 'package:isar/isar.dart';
 
 part 'funding_models.g.dart';
 
+/// حالات الحجز
+enum ReservationStatus {
+  reserved('محجوز'),
+  approved('معتمد'),
+  cancelled('ملغي'),
+  spent('مصروف');
+
+  const ReservationStatus(this.displayName);
+  final String displayName;
+
+  /// الحصول على الحالة من النص
+  static ReservationStatus fromString(String status) {
+    switch (status) {
+      case 'محجوز':
+        return ReservationStatus.reserved;
+      case 'معتمد':
+        return ReservationStatus.approved;
+      case 'ملغي':
+        return ReservationStatus.cancelled;
+      case 'مصروف':
+        return ReservationStatus.spent;
+      default:
+        return ReservationStatus.reserved;
+    }
+  }
+}
+
 /// نموذج الباب التمويلي (الرئيسي أو الفرعي)
 @collection
 class FundingCategory {
   Id id = Isar.autoIncrement;
-  
+
   @Index()
   late String name;
-  
+
   int? parentId; // يشير إلى الباب الأعلى
-  
+
   String? description; // وصف الباب (اختياري)
-  
+
   DateTime? createdAt;
   DateTime? updatedAt;
 
@@ -57,24 +84,19 @@ class FundingCategory {
 @collection
 class Institution {
   Id id = Isar.autoIncrement;
-  
+
   @Index()
   late String name;
-  
+
   String? address;
-  
+
   @Index()
   String? code;
 
   Institution();
 
   /// إنشاء نسخة محدثة من الكائن
-  Institution copyWith({
-    Id? id,
-    String? name,
-    String? address,
-    String? code,
-  }) {
+  Institution copyWith({Id? id, String? name, String? address, String? code}) {
     final institution = Institution()
       ..id = id ?? this.id
       ..name = name ?? this.name
@@ -103,27 +125,27 @@ class Institution {
 @collection
 class InstitutionFunding {
   Id id = Isar.autoIncrement;
-  
+
   @Index()
   int institutionId = 0;
-  
+
   @Index()
   int categoryId = 0;
-  
+
   @Index()
   String fundingType = ''; // 'سنوي' أو 'شهري'
-  
+
   double allocatedAmount = 0.0; // المبلغ المخصص
   double reservedAmount = 0.0; // المبلغ المحجوز
   double spentAmount = 0.0; // المبلغ المصروف
-    
+
   String? executionAttachmentPath; // مسار مرفق تنفيذ الصرف (PDF)
-  
+
   @Index()
   int year = 0;
-  
+
   int? month; // الشهر (اختياري - فقط للتمويل الشهري)
-  
+
   DateTime? createdAt;
   DateTime? updatedAt;
 
@@ -136,8 +158,19 @@ class InstitutionFunding {
   String get monthName {
     if (month == null) return '';
     const monthNames = [
-      '', 'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+      '',
+      'يناير',
+      'فبراير',
+      'مارس',
+      'أبريل',
+      'مايو',
+      'يونيو',
+      'يوليو',
+      'أغسطس',
+      'سبتمبر',
+      'أكتوبر',
+      'نوفمبر',
+      'ديسمبر',
     ];
     return month! > 0 && month! <= 12 ? monthNames[month!] : '';
   }
@@ -173,7 +206,8 @@ class InstitutionFunding {
       ..allocatedAmount = allocatedAmount ?? this.allocatedAmount
       ..reservedAmount = reservedAmount ?? this.reservedAmount
       ..spentAmount = spentAmount ?? this.spentAmount
-      ..executionAttachmentPath = executionAttachmentPath ?? this.executionAttachmentPath
+      ..executionAttachmentPath =
+          executionAttachmentPath ?? this.executionAttachmentPath
       ..year = year ?? this.year
       ..month = month ?? this.month
       ..createdAt = createdAt ?? this.createdAt
@@ -206,14 +240,14 @@ class FundingAttachment {
 
   @Index()
   int? fundingId; // يرتبط بسجل InstitutionFunding
-  
+
   String? fileName; // اسم الملف
   String? filePath; // المسار المحلي أو رابط التحميل
   String? fileType; // نوع الملف (pdf, jpg, docx...)
-  
+
   @Index()
   DateTime? uploadedAt; // وقت الرفع
-  
+
   String? description; // وصف أو ملاحظات عن الملف
 
   FundingAttachment();
@@ -262,28 +296,28 @@ class FundingArchive {
 
   @Index()
   int? fundingId; // يرتبط بسجل InstitutionFunding
-  
+
   @Index()
   int? institutionId; // المؤسسة
-  
+
   @Index()
   int? categoryId; // الباب
-  
+
   late String operationType; // 'صرف' أو 'حجز'
   late double amount; // المبلغ
-  
+
   String? description; // وصف العملية
   String? executionAttachmentPath; // مسار مرفق التنفيذ (PDF)
-  
+
   @Index()
   late int year; // السنة
-  
+
   @Index()
   late int month; // الشهر
-  
+
   @Index()
   DateTime? executedAt; // وقت التنفيذ
-  
+
   DateTime? createdAt;
   DateTime? updatedAt;
 
@@ -313,7 +347,8 @@ class FundingArchive {
       ..operationType = operationType ?? this.operationType
       ..amount = amount ?? this.amount
       ..description = description ?? this.description
-      ..executionAttachmentPath = executionAttachmentPath ?? this.executionAttachmentPath
+      ..executionAttachmentPath =
+          executionAttachmentPath ?? this.executionAttachmentPath
       ..year = year ?? this.year
       ..month = month ?? this.month
       ..executedAt = executedAt ?? this.executedAt
@@ -345,37 +380,38 @@ class FundingTransaction {
 
   @Index()
   int? fundingId; // يرتبط بسجل InstitutionFunding
-  
+
   @Index()
   int? institutionId; // المؤسسة
-  
+
   @Index()
   int? categoryId; // الباب
-  
+
   @Index()
-  late String status; // 'pending' (طلب حجز), 'executed' (منفذ), 'cancelled' (ملغي)
-  
+  @Enumerated(EnumType.name)
+  late ReservationStatus status; // حالة الحجز: محجوز، معتمد، ملغي، مصروف
+
   late double requestedAmount; // المبلغ المطلوب حجزه
   double? executedAmount; // المبلغ المنفذ فعلياً (قد يختلف عن المطلوب)
-  
+
   String? requestDescription; // وصف طلب الحجز
   String? executionDescription; // وصف تنفيذ الصرف
-  
+
   String? reservationAttachmentPath; // مرفق طلب الحجز (PDF)
   String? executionAttachmentPath; // مرفق تنفيذ الصرف (PDF)
-  
+
   @Index()
   DateTime? requestDate; // تاريخ طلب الحجز
-  
+
   @Index()
   DateTime? executionDate; // تاريخ تنفيذ الصرف
-  
+
   @Index()
   late int year; // السنة
-  
+
   @Index()
   late int month; // الشهر
-  
+
   DateTime? createdAt;
   DateTime? updatedAt;
 
@@ -387,7 +423,7 @@ class FundingTransaction {
     int? fundingId,
     int? institutionId,
     int? categoryId,
-    String? status,
+    ReservationStatus? status,
     double? requestedAmount,
     double? executedAmount,
     String? requestDescription,
@@ -411,8 +447,10 @@ class FundingTransaction {
       ..executedAmount = executedAmount ?? this.executedAmount
       ..requestDescription = requestDescription ?? this.requestDescription
       ..executionDescription = executionDescription ?? this.executionDescription
-      ..reservationAttachmentPath = reservationAttachmentPath ?? this.reservationAttachmentPath
-      ..executionAttachmentPath = executionAttachmentPath ?? this.executionAttachmentPath
+      ..reservationAttachmentPath =
+          reservationAttachmentPath ?? this.reservationAttachmentPath
+      ..executionAttachmentPath =
+          executionAttachmentPath ?? this.executionAttachmentPath
       ..requestDate = requestDate ?? this.requestDate
       ..executionDate = executionDate ?? this.executionDate
       ..year = year ?? this.year
@@ -424,16 +462,7 @@ class FundingTransaction {
 
   /// نص الحالة بالعربية
   String get statusText {
-    switch (status) {
-      case 'pending':
-        return 'طلب حجز';
-      case 'executed':
-        return 'منفذ';
-      case 'cancelled':
-        return 'ملغي';
-      default:
-        return 'غير محدد';
-    }
+    return status.displayName;
   }
 
   @override

@@ -3,46 +3,93 @@ import 'package:isar/isar.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import '../models/funding_models.dart';
+import '../models/active_period.dart';
 import '../services/database_service.dart';
+import '../services/active_period_service.dart';
 
 class ReservationExecutionScreen extends StatefulWidget {
   @override
-  _ReservationExecutionScreenState createState() => _ReservationExecutionScreenState();
+  _ReservationExecutionScreenState createState() =>
+      _ReservationExecutionScreenState();
 }
 
-class _ReservationExecutionScreenState extends State<ReservationExecutionScreen> {
+class _ReservationExecutionScreenState
+    extends State<ReservationExecutionScreen> {
   List<FundingTransaction> transactions = [];
   List<InstitutionFunding> allocations = [];
   List<FundingCategory> categories = [];
   List<Institution> institutions = [];
-  
-  // فلاتر البحث
-  int _selectedYear = DateTime.now().year;
+
+  // متغيرات الفترة النشطة
+  ActivePeriod? _activePeriod;
+  bool _isLoadingPeriod = true;
+
+  // فلاتر البحث (بدون سنة وشهر لأنها ثابتة)
   String _selectedStatus = 'all'; // all, pending, executed, cancelled
-  
+
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _loadActivePeriod();
+  }
+
+  Future<void> _loadActivePeriod() async {
+    setState(() {
+      _isLoadingPeriod = true;
+    });
+
+    try {
+      final activePeriod = await ActivePeriodService.getCurrentActivePeriod();
+
+      if (activePeriod == null) {
+        // لا توجد فترة نشطة - اقتراح فتح فترة جديدة
+        await _showOpenPeriodDialog();
+      } else {
+        setState(() {
+          _activePeriod = activePeriod;
+        });
+        await _loadData();
+      }
+    } catch (e) {
+      print('خطأ في تحميل الفترة النشطة: $e');
+      _showErrorSnackBar('خطأ في تحميل الفترة النشطة');
+    } finally {
+      setState(() {
+        _isLoadingPeriod = false;
+      });
+    }
   }
 
   Future<void> _loadData() async {
+    if (_activePeriod == null) return;
+
     try {
-      // تحميل المعاملات
-      final loadedTransactions = await DatabaseService.getAllFundingTransactions();
-      
-      // تحميل التخصيصات
+      // تحميل المعاملات للفترة النشطة فقط
+      final loadedTransactions = await DatabaseService.isar.fundingTransactions
+          .filter()
+          .yearEqualTo(_activePeriod!.activeYear)
+          .and()
+          .monthEqualTo(_activePeriod!.activeMonth)
+          .findAll();
+
+      // تحميل التخصيصات للفترة النشطة فقط
       final loadedAllocations = await DatabaseService.isar.institutionFundings
           .filter()
-          .yearEqualTo(_selectedYear)
+          .yearEqualTo(_activePeriod!.activeYear)
+          .and()
+          .monthEqualTo(_activePeriod!.activeMonth)
           .findAll();
-      
+
       // تحميل الأبواب
-      final loadedCategories = await DatabaseService.isar.fundingCategorys.where().findAll();
-      
+      final loadedCategories = await DatabaseService.isar.fundingCategorys
+          .where()
+          .findAll();
+
       // تحميل المؤسسات
-      final loadedInstitutions = await DatabaseService.isar.institutions.where().findAll();
-      
+      final loadedInstitutions = await DatabaseService.isar.institutions
+          .where()
+          .findAll();
+
       setState(() {
         transactions = loadedTransactions;
         allocations = loadedAllocations;
@@ -51,18 +98,115 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
       });
     } catch (e) {
       print('خطأ في تحميل البيانات: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ في تحميل البيانات')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('خطأ في تحميل البيانات')));
     }
   }
 
   List<FundingTransaction> get _filteredTransactions {
     return transactions.where((transaction) {
-      if (transaction.year != _selectedYear) return false;
-      if (_selectedStatus != 'all' && transaction.status != _selectedStatus) return false;
+      if (_selectedStatus != 'all' &&
+          transaction.status.toString().split('.').last != _selectedStatus)
+        return false;
       return true;
     }).toList();
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+
+  Future<void> _showOpenPeriodDialog() async {
+    final now = DateTime.now();
+    int selectedYear = now.year;
+    int selectedMonth = now.month;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('فتح فترة مالية جديدة'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('لا توجد فترة مالية نشطة. يرجى فتح فترة مالية للعمل عليها.'),
+              SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<int>(
+                      value: selectedYear,
+                      decoration: InputDecoration(
+                        labelText: 'السنة',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: List.generate(3, (index) {
+                        final year = now.year - 1 + index;
+                        return DropdownMenuItem(
+                          value: year,
+                          child: Text(year.toString()),
+                        );
+                      }),
+                      onChanged: (value) {
+                        setDialogState(() {
+                          selectedYear = value!;
+                        });
+                      },
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: DropdownButtonFormField<int>(
+                      value: selectedMonth,
+                      decoration: InputDecoration(
+                        labelText: 'الشهر',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: List.generate(12, (index) {
+                        final month = index + 1;
+                        return DropdownMenuItem(
+                          value: month,
+                          child: Text(_getMonthName(month)),
+                        );
+                      }),
+                      onChanged: (value) {
+                        setDialogState(() {
+                          selectedMonth = value!;
+                        });
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () async {
+                final success = await ActivePeriodService.openNewPeriod(
+                  selectedYear,
+                  selectedMonth,
+                  'المستخدم',
+                  notes: 'فتح تلقائي من شاشة الحجز والصرف',
+                );
+
+                if (success) {
+                  Navigator.of(context).pop();
+                  await _loadActivePeriod();
+                } else {
+                  _showErrorSnackBar('فشل في فتح الفترة المالية');
+                }
+              },
+              child: Text('فتح الفترة'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _showReservationRequestDialog() async {
@@ -79,8 +223,8 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
         builder: (context, setDialogState) => AlertDialog(
           title: Text('طلب حجز جديد'),
           content: SizedBox(
-             width: 400,
-  height: MediaQuery.of(context).size.height * 0.7,
+            width: 400,
+            height: MediaQuery.of(context).size.height * 0.7,
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -88,35 +232,97 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
                   // اختيار التخصيص
                   DropdownButtonFormField<InstitutionFunding>(
                     value: selectedAllocation,
-                    decoration: InputDecoration(contentPadding:  EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: InputDecoration(
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       labelText: 'اختيار التخصيص',
                       border: OutlineInputBorder(),
                     ),
                     isExpanded: true,
                     menuMaxHeight: 500,
                     items: allocations.map((allocation) {
-                      final categoryName = _getCategoryName(allocation.categoryId);
-                      final institutionName = _getInstitutionName(allocation.institutionId);
+                      final categoryName = _getCategoryName(
+                        allocation.categoryId,
+                      );
+                      final institutionName = _getInstitutionName(
+                        allocation.institutionId,
+                      );
                       final availableAmount = allocation.remainingAmount;
-                      
+                      final fundingTypeText = allocation.fundingType;
+                      final monthText = allocation.month != null
+                          ? ' - ${_getMonthName(allocation.month!)}'
+                          : '';
+
                       return DropdownMenuItem(
                         value: allocation,
                         alignment: Alignment.centerRight,
-                        child:
-                         ListTile(
-                          dense: true,
-                           isThreeLine: true,
-                          title: Text(
-                            '$categoryName - $institutionName',
-                            style: TextStyle(fontSize: 14),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          subtitle: Text(
-                            'المتاح: ${availableAmount.toStringAsFixed(0)} د.ع',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: availableAmount > 0 ? Colors.green : Colors.red,
-                            ),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(vertical: 4),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '$categoryName - $institutionName',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: allocation.fundingType == 'شهري'
+                                          ? Colors.orange[100]
+                                          : Colors.blue[100],
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      '$fundingTypeText ${allocation.year}$monthText',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: allocation.fundingType == 'شهري'
+                                            ? Colors.orange[800]
+                                            : Colors.blue[800],
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  Spacer(),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        'مخصص: ${allocation.allocatedAmount.toStringAsFixed(0)} د.ع',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                      Text(
+                                        'متاح: ${availableAmount.toStringAsFixed(0)} د.ع',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: availableAmount > 0
+                                              ? Colors.green
+                                              : Colors.red,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
                       );
@@ -152,7 +358,9 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
                   // تاريخ الطلب
                   ListTile(
                     title: Text('تاريخ الطلب'),
-                    subtitle: Text('${selectedDate.day}/${selectedDate.month}/${selectedDate.year}'),
+                    subtitle: Text(
+                      '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
+                    ),
                     trailing: Icon(Icons.calendar_today),
                     onTap: () async {
                       final date = await showDatePicker(
@@ -184,7 +392,9 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
                           child: Text(
                             selectedPdfName ?? 'لم يتم اختيار مرفق PDF',
                             style: TextStyle(
-                              color: selectedPdfName != null ? Colors.black : Colors.grey[600],
+                              color: selectedPdfName != null
+                                  ? Colors.black
+                                  : Colors.grey[600],
                             ),
                           ),
                         ),
@@ -195,8 +405,9 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
                               allowedExtensions: ['pdf'],
                               allowMultiple: false,
                             );
-            
-                            if (result != null && result.files.single.path != null) {
+
+                            if (result != null &&
+                                result.files.single.path != null) {
                               setDialogState(() {
                                 selectedPdfPath = result.files.single.path;
                                 selectedPdfName = result.files.single.name;
@@ -220,7 +431,8 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
             ),
             ElevatedButton(
               onPressed: () async {
-                if (selectedAllocation == null || amountController.text.isEmpty) {
+                if (selectedAllocation == null ||
+                    amountController.text.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('يرجى ملء جميع الحقول المطلوبة')),
                   );
@@ -252,11 +464,12 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
                     ..fundingId = selectedAllocation!.id
                     ..institutionId = selectedAllocation!.institutionId
                     ..categoryId = selectedAllocation!.categoryId
-                    ..status = 'pending'
+                    ..status = ReservationStatus.reserved
                     ..requestedAmount = amount
-                    ..requestDescription = descriptionController.text.trim().isEmpty 
-                      ? null 
-                      : descriptionController.text.trim()
+                    ..requestDescription =
+                        descriptionController.text.trim().isEmpty
+                        ? null
+                        : descriptionController.text.trim()
                     ..reservationAttachmentPath = selectedPdfPath
                     ..requestDate = selectedDate
                     ..year = selectedAllocation!.year
@@ -265,14 +478,19 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
                     ..updatedAt = DateTime.now();
 
                   await DatabaseService.isar.writeTxn(() async {
-                    await DatabaseService.isar.fundingTransactions.put(transaction);
-                    
+                    await DatabaseService.isar.fundingTransactions.put(
+                      transaction,
+                    );
+
                     // تحديث المبلغ المحجوز في التخصيص
                     final updatedAllocation = selectedAllocation!.copyWith(
-                      reservedAmount: selectedAllocation!.reservedAmount + amount,
+                      reservedAmount:
+                          selectedAllocation!.reservedAmount + amount,
                       updatedAt: DateTime.now(),
                     );
-                    await DatabaseService.isar.institutionFundings.put(updatedAllocation);
+                    await DatabaseService.isar.institutionFundings.put(
+                      updatedAllocation,
+                    );
                   });
 
                   Navigator.of(context).pop();
@@ -298,7 +516,7 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
 
   Future<void> _showExecutionDialog(FundingTransaction transaction) async {
     final executedAmountController = TextEditingController(
-      text: transaction.requestedAmount.toString()
+      text: transaction.requestedAmount.toString(),
     );
     final executionDescriptionController = TextEditingController();
     String? selectedPdfPath;
@@ -311,8 +529,8 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
         builder: (context, setDialogState) => AlertDialog(
           title: Text('تنفيذ الصرف'),
           content: SizedBox(
-             width: 400,
-  height: MediaQuery.of(context).size.height * 0.7,
+            width: 400,
+            height: MediaQuery.of(context).size.height * 0.7,
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -327,9 +545,16 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('معلومات الطلب:', style: TextStyle(fontWeight: FontWeight.bold)),
-                        Text('المبلغ المطلوب: ${transaction.requestedAmount.toStringAsFixed(0)} د.ع'),
-                        Text('تاريخ الطلب: ${transaction.requestDate?.day}/${transaction.requestDate?.month}/${transaction.requestDate?.year}'),
+                        Text(
+                          'معلومات الطلب:',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          'المبلغ المطلوب: ${transaction.requestedAmount.toStringAsFixed(0)} د.ع',
+                        ),
+                        Text(
+                          'تاريخ الطلب: ${transaction.requestDate?.day}/${transaction.requestDate?.month}/${transaction.requestDate?.year}',
+                        ),
                         if (transaction.requestDescription != null)
                           Text('الوصف: ${transaction.requestDescription}'),
                       ],
@@ -360,13 +585,17 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
                   // تاريخ التنفيذ
                   ListTile(
                     title: Text('تاريخ التنفيذ'),
-                    subtitle: Text('${selectedDate.day}/${selectedDate.month}/${selectedDate.year}'),
+                    subtitle: Text(
+                      '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
+                    ),
                     trailing: Icon(Icons.calendar_today),
                     onTap: () async {
                       final date = await showDatePicker(
                         context: context,
                         initialDate: selectedDate,
-                        firstDate: transaction.requestDate ?? DateTime.now().subtract(Duration(days: 365)),
+                        firstDate:
+                            transaction.requestDate ??
+                            DateTime.now().subtract(Duration(days: 365)),
                         lastDate: DateTime.now().add(Duration(days: 30)),
                       );
                       if (date != null) {
@@ -392,7 +621,9 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
                           child: Text(
                             selectedPdfName ?? 'لم يتم اختيار مرفق التنفيذ',
                             style: TextStyle(
-                              color: selectedPdfName != null ? Colors.black : Colors.grey[600],
+                              color: selectedPdfName != null
+                                  ? Colors.black
+                                  : Colors.grey[600],
                             ),
                           ),
                         ),
@@ -403,8 +634,9 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
                               allowedExtensions: ['pdf'],
                               allowMultiple: false,
                             );
-            
-                            if (result != null && result.files.single.path != null) {
+
+                            if (result != null &&
+                                result.files.single.path != null) {
                               setDialogState(() {
                                 selectedPdfPath = result.files.single.path;
                                 selectedPdfName = result.files.single.name;
@@ -428,7 +660,9 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
             ),
             ElevatedButton(
               onPressed: () async {
-                final executedAmount = double.tryParse(executedAmountController.text);
+                final executedAmount = double.tryParse(
+                  executedAmountController.text,
+                );
                 if (executedAmount == null || executedAmount <= 0) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('يرجى إدخال مبلغ تنفيذ صحيح')),
@@ -439,7 +673,9 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
                 if (executedAmount > transaction.requestedAmount) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('مبلغ التنفيذ لا يمكن أن يتجاوز المبلغ المطلوب!'),
+                      content: Text(
+                        'مبلغ التنفيذ لا يمكن أن يتجاوز المبلغ المطلوب!',
+                      ),
                       backgroundColor: Colors.red,
                     ),
                   );
@@ -450,9 +686,9 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
                   final success = await DatabaseService.executeTransaction(
                     transaction.id,
                     executedAmount,
-                    executionDescriptionController.text.trim().isEmpty 
-                      ? null 
-                      : executionDescriptionController.text.trim(),
+                    executionDescriptionController.text.trim().isEmpty
+                        ? null
+                        : executionDescriptionController.text.trim(),
                     selectedPdfPath,
                     selectedDate,
                   );
@@ -471,9 +707,9 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
                   }
                 } catch (e) {
                   print('خطأ في تنفيذ الصرف: $e');
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('خطأ في تنفيذ الصرف')),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('خطأ في تنفيذ الصرف')));
                 }
               },
               child: Text('تنفيذ الصرف'),
@@ -489,15 +725,15 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
       if (await File(filePath).exists()) {
         await Process.start('explorer', [filePath], runInShell: true);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('الملف غير موجود')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('الملف غير موجود')));
       }
     } catch (e) {
       print('خطأ في فتح الملف: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ في فتح الملف')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('خطأ في فتح الملف')));
     }
   }
 
@@ -511,27 +747,104 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
 
   String _getInstitutionName(int institutionId) {
     final institution = institutions.firstWhere(
-      (i) => i.id == institutionId,
+      (inst) => inst.id == institutionId,
       orElse: () => Institution()..name = 'غير معروف',
     );
     return institution.name;
   }
 
-  Color _getStatusColor(String status) {
+  String _getMonthName(int month) {
+    const months = [
+      'يناير',
+      'فبراير',
+      'مارس',
+      'أبريل',
+      'مايو',
+      'يونيو',
+      'يوليو',
+      'أغسطس',
+      'سبتمبر',
+      'أكتوبر',
+      'نوفمبر',
+      'ديسمبر',
+    ];
+    return months[month - 1];
+  }
+
+  Color _getStatusColor(ReservationStatus status) {
     switch (status) {
-      case 'pending':
+      case ReservationStatus.reserved:
         return Colors.orange;
-      case 'executed':
+      case ReservationStatus.approved:
+        return Colors.blue;
+      case ReservationStatus.spent:
         return Colors.green;
-      case 'cancelled':
+      case ReservationStatus.cancelled:
         return Colors.red;
-      default:
-        return Colors.grey;
+    }
+  }
+
+  IconData _getStatusIcon(ReservationStatus status) {
+    switch (status) {
+      case ReservationStatus.reserved:
+        return Icons.bookmark;
+      case ReservationStatus.approved:
+        return Icons.check_circle_outline;
+      case ReservationStatus.spent:
+        return Icons.check_circle;
+      case ReservationStatus.cancelled:
+        return Icons.cancel;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoadingPeriod) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('إدارة الحجز والصرف'),
+          backgroundColor: Colors.indigo,
+          foregroundColor: Colors.white,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('جاري تحميل الفترة المالية...'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_activePeriod == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('إدارة الحجز والصرف'),
+          backgroundColor: Colors.indigo,
+          foregroundColor: Colors.white,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.calendar_today_outlined, size: 80, color: Colors.grey),
+              SizedBox(height: 16),
+              Text('لا توجد فترة مالية نشطة', style: TextStyle(fontSize: 18)),
+              SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () => _showOpenPeriodDialog(),
+                icon: Icon(Icons.add),
+                label: Text('فتح فترة مالية جديدة'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text('إدارة الحجز والصرف'),
@@ -540,35 +853,38 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
       ),
       body: Column(
         children: [
-          // شريط الفلاتر
+          // معلومات الفترة المالية النشطة
           Container(
             padding: EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey[100],
-              border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
+              color: Colors.indigo[50],
+              border: Border(bottom: BorderSide(color: Colors.indigo[200]!)),
             ),
             child: Row(
               children: [
+                Icon(Icons.calendar_today, color: Colors.indigo),
+                SizedBox(width: 12),
                 Expanded(
-                  child: DropdownButtonFormField<int>(
-                    value: _selectedYear,
-                    decoration: InputDecoration(
-                      labelText: 'السنة',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: List.generate(10, (index) {
-                      final year = DateTime.now().year - 5 + index;
-                      return DropdownMenuItem(
-                        value: year,
-                        child: Text(year.toString()),
-                      );
-                    }),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedYear = value!;
-                        _loadData();
-                      });
-                    },
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'الفترة المالية النشطة',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.indigo[700],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Text(
+                        _activePeriod!.periodText,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.indigo[900],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 SizedBox(width: 16),
@@ -580,16 +896,116 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
                       border: OutlineInputBorder(),
                     ),
                     items: [
-                      DropdownMenuItem(value: 'all', child: Text('جميع الحالات')),
-                      DropdownMenuItem(value: 'pending', child: Text('طلبات الحجز')),
+                      DropdownMenuItem(
+                        value: 'all',
+                        child: Text('جميع الحالات'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'reserved',
+                        child: Text('طلبات الحجز'),
+                      ),
                       DropdownMenuItem(value: 'executed', child: Text('منفذة')),
-                      DropdownMenuItem(value: 'cancelled', child: Text('ملغية')),
+                      DropdownMenuItem(
+                        value: 'cancelled',
+                        child: Text('ملغية'),
+                      ),
                     ],
                     onChanged: (value) {
                       setState(() {
                         _selectedStatus = value!;
                       });
                     },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // إحصائيات سريعة
+          Container(
+            padding: EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Card(
+                    color: Colors.orange[50],
+                    child: Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Column(
+                        children: [
+                          Text(
+                            'إجمالي المحجوز',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          Text(
+                            '${_filteredTransactions.where((t) => t.status == ReservationStatus.reserved).fold(0.0, (sum, t) => sum + t.requestedAmount).toStringAsFixed(0)} د.ع',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange[800],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Card(
+                    color: Colors.green[50],
+                    child: Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Column(
+                        children: [
+                          Text(
+                            'إجمالي المنفذ',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          Text(
+                            '${_filteredTransactions.where((t) => t.status == ReservationStatus.spent).fold(0.0, (sum, t) => sum + (t.executedAmount ?? 0)).toStringAsFixed(0)} د.ع',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green[800],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Card(
+                    color: Colors.blue[50],
+                    child: Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Column(
+                        children: [
+                          Text(
+                            'عدد المعاملات',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          Text(
+                            '${_filteredTransactions.length}',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue[800],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -604,7 +1020,10 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
                       children: [
                         Icon(Icons.receipt_long, size: 80, color: Colors.grey),
                         SizedBox(height: 16),
-                        Text('لا توجد معاملات', style: TextStyle(fontSize: 18, color: Colors.grey)),
+                        Text(
+                          'لا توجد معاملات',
+                          style: TextStyle(fontSize: 18, color: Colors.grey),
+                        ),
                       ],
                     ),
                   )
@@ -612,20 +1031,25 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
                     itemCount: _filteredTransactions.length,
                     itemBuilder: (context, index) {
                       final transaction = _filteredTransactions[index];
-                      final categoryName = _getCategoryName(transaction.categoryId!);
-                      final institutionName = _getInstitutionName(transaction.institutionId!);
+                      final categoryName = _getCategoryName(
+                        transaction.categoryId!,
+                      );
+                      final institutionName = _getInstitutionName(
+                        transaction.institutionId!,
+                      );
 
                       return Card(
-                        margin: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        margin: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 4,
+                        ),
                         child: ExpansionTile(
                           leading: CircleAvatar(
-                            backgroundColor: _getStatusColor(transaction.status),
+                            backgroundColor: _getStatusColor(
+                              transaction.status,
+                            ),
                             child: Icon(
-                              transaction.status == 'pending' 
-                                ? Icons.pending 
-                                : transaction.status == 'executed'
-                                  ? Icons.check_circle
-                                  : Icons.cancel,
+                              _getStatusIcon(transaction.status),
                               color: Colors.white,
                             ),
                           ),
@@ -633,10 +1057,44 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('الحالة: ${transaction.statusText}'),
-                              Text('المبلغ المطلوب: ${transaction.requestedAmount.toStringAsFixed(0)} د.ع'),
+                              Row(
+                                children: [
+                                  Text('الحالة: ${transaction.statusText}'),
+                                  Spacer(),
+                                  Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: transaction.month > 0
+                                          ? Colors.orange[100]
+                                          : Colors.blue[100],
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      transaction.month > 0
+                                          ? 'شهري ${transaction.year} - ${_getMonthName(transaction.month)}'
+                                          : 'سنوي ${transaction.year}',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: transaction.month > 0
+                                            ? Colors.orange[800]
+                                            : Colors.blue[800],
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'المبلغ المطلوب: ${transaction.requestedAmount.toStringAsFixed(0)} د.ع',
+                              ),
                               if (transaction.executedAmount != null)
-                                Text('المبلغ المنفذ: ${transaction.executedAmount!.toStringAsFixed(0)} د.ع'),
+                                Text(
+                                  'المبلغ المنفذ: ${transaction.executedAmount!.toStringAsFixed(0)} د.ع',
+                                ),
                             ],
                           ),
                           children: [
@@ -654,18 +1112,38 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Text('معلومات طلب الحجز:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                        Text(
+                                          'معلومات طلب الحجز:',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
                                         SizedBox(height: 8),
-                                        Text('تاريخ الطلب: ${transaction.requestDate?.day}/${transaction.requestDate?.month}/${transaction.requestDate?.year}'),
-                                        if (transaction.requestDescription != null)
-                                          Text('وصف الطلب: ${transaction.requestDescription}'),
+                                        Text(
+                                          'تاريخ الطلب: ${transaction.requestDate?.day}/${transaction.requestDate?.month}/${transaction.requestDate?.year}',
+                                        ),
+                                        Text(
+                                          'مصدر التمويل: ${transaction.month > 0 ? 'تمويل شهري ${_getMonthName(transaction.month)} ${transaction.year}' : 'تمويل سنوي ${transaction.year}'}',
+                                        ),
+                                        if (transaction.requestDescription !=
+                                            null)
+                                          Text(
+                                            'وصف الطلب: ${transaction.requestDescription}',
+                                          ),
                                         SizedBox(height: 8),
-                                        if (transaction.reservationAttachmentPath != null)
+                                        if (transaction
+                                                .reservationAttachmentPath !=
+                                            null)
                                           Row(
                                             children: [
-                                              Icon(Icons.picture_as_pdf, size: 16, color: Colors.red),
+                                              Icon(
+                                                Icons.picture_as_pdf,
+                                                size: 16,
+                                                color: Colors.red,
+                                              ),
                                               SizedBox(width: 4),
                                               Expanded(
                                                 child: Text(
@@ -673,13 +1151,20 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
                                                   style: TextStyle(
                                                     fontSize: 12,
                                                     color: Colors.blue,
-                                                    decoration: TextDecoration.underline,
+                                                    decoration: TextDecoration
+                                                        .underline,
                                                   ),
                                                 ),
                                               ),
                                               IconButton(
-                                                icon: Icon(Icons.open_in_new, size: 16),
-                                                onPressed: () => _openPdfFile(transaction.reservationAttachmentPath!),
+                                                icon: Icon(
+                                                  Icons.open_in_new,
+                                                  size: 16,
+                                                ),
+                                                onPressed: () => _openPdfFile(
+                                                  transaction
+                                                      .reservationAttachmentPath!,
+                                                ),
                                                 tooltip: 'فتح مرفق الطلب',
                                               ),
                                             ],
@@ -698,19 +1183,39 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
-                                          Text('معلومات التنفيذ:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                          Text(
+                                            'معلومات التنفيذ:',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
                                           SizedBox(height: 8),
-                                          Text('تاريخ التنفيذ: ${transaction.executionDate?.day}/${transaction.executionDate?.month}/${transaction.executionDate?.year}'),
-                                          Text('المبلغ المنفذ: ${transaction.executedAmount?.toStringAsFixed(0)} د.ع'),
-                                          if (transaction.executionDescription != null)
-                                            Text('وصف التنفيذ: ${transaction.executionDescription}'),
+                                          Text(
+                                            'تاريخ التنفيذ: ${transaction.executionDate?.day}/${transaction.executionDate?.month}/${transaction.executionDate?.year}',
+                                          ),
+                                          Text(
+                                            'المبلغ المنفذ: ${transaction.executedAmount?.toStringAsFixed(0)} د.ع',
+                                          ),
+                                          if (transaction
+                                                  .executionDescription !=
+                                              null)
+                                            Text(
+                                              'وصف التنفيذ: ${transaction.executionDescription}',
+                                            ),
                                           SizedBox(height: 8),
-                                          if (transaction.executionAttachmentPath != null)
+                                          if (transaction
+                                                  .executionAttachmentPath !=
+                                              null)
                                             Row(
                                               children: [
-                                                Icon(Icons.picture_as_pdf, size: 16, color: Colors.red),
+                                                Icon(
+                                                  Icons.picture_as_pdf,
+                                                  size: 16,
+                                                  color: Colors.red,
+                                                ),
                                                 SizedBox(width: 4),
                                                 Expanded(
                                                   child: Text(
@@ -718,13 +1223,20 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
                                                     style: TextStyle(
                                                       fontSize: 12,
                                                       color: Colors.blue,
-                                                      decoration: TextDecoration.underline,
+                                                      decoration: TextDecoration
+                                                          .underline,
                                                     ),
                                                   ),
                                                 ),
                                                 IconButton(
-                                                  icon: Icon(Icons.open_in_new, size: 16),
-                                                  onPressed: () => _openPdfFile(transaction.executionAttachmentPath!),
+                                                  icon: Icon(
+                                                    Icons.open_in_new,
+                                                    size: 16,
+                                                  ),
+                                                  onPressed: () => _openPdfFile(
+                                                    transaction
+                                                        .executionAttachmentPath!,
+                                                  ),
                                                   tooltip: 'فتح مرفق التنفيذ',
                                                 ),
                                               ],
@@ -735,11 +1247,14 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
                                   SizedBox(height: 12),
                                   // أزرار العمليات
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceEvenly,
                                     children: [
-                                      if (transaction.status == 'pending')
+                                      if (transaction.status ==
+                                          ReservationStatus.reserved)
                                         ElevatedButton.icon(
-                                          onPressed: () => _showExecutionDialog(transaction),
+                                          onPressed: () =>
+                                              _showExecutionDialog(transaction),
                                           icon: Icon(Icons.payment),
                                           label: Text('تنفيذ الصرف'),
                                           style: ElevatedButton.styleFrom(
@@ -747,7 +1262,8 @@ class _ReservationExecutionScreenState extends State<ReservationExecutionScreen>
                                             foregroundColor: Colors.white,
                                           ),
                                         ),
-                                      if (transaction.status == 'pending')
+                                      if (transaction.status ==
+                                          ReservationStatus.reserved)
                                         OutlinedButton.icon(
                                           onPressed: () {
                                             // TODO: إلغاء الطلب

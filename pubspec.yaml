@@ -39,7 +39,7 @@ dependencies:
 
   # Excel operations
   excel: ^2.1.0
-  file_picker: ^6.1.1
+  file_picker: ^8.0.3
 
   # PDF and printing
   pdf: ^3.10.7

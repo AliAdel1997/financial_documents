@@ -14,7 +14,7 @@ class DocumentsProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   DocumentStatus? get statusFilter => _statusFilter;
- 
+
   /// تحميل جميع المستندات
   Future<void> loadDocuments() async {
     _isLoading = true;

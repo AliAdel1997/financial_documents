@@ -9574,6 +9574,7 @@ const FundingTransactionSchema = CollectionSchema(
       id: 14,
       name: r'status',
       type: IsarType.string,
+      enumMap: _FundingTransactionstatusEnumValueMap,
     ),
     r'statusText': PropertySchema(
       id: 15,
@@ -9740,7 +9741,7 @@ int _fundingTransactionEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
-  bytesCount += 3 + object.status.length * 3;
+  bytesCount += 3 + object.status.name.length * 3;
   bytesCount += 3 + object.statusText.length * 3;
   return bytesCount;
 }
@@ -9765,7 +9766,7 @@ void _fundingTransactionSerialize(
   writer.writeString(offsets[11], object.requestDescription);
   writer.writeDouble(offsets[12], object.requestedAmount);
   writer.writeString(offsets[13], object.reservationAttachmentPath);
-  writer.writeString(offsets[14], object.status);
+  writer.writeString(offsets[14], object.status.name);
   writer.writeString(offsets[15], object.statusText);
   writer.writeDateTime(offsets[16], object.updatedAt);
   writer.writeLong(offsets[17], object.year);
@@ -9792,7 +9793,9 @@ FundingTransaction _fundingTransactionDeserialize(
   object.requestDescription = reader.readStringOrNull(offsets[11]);
   object.requestedAmount = reader.readDouble(offsets[12]);
   object.reservationAttachmentPath = reader.readStringOrNull(offsets[13]);
-  object.status = reader.readString(offsets[14]);
+  object.status = _FundingTransactionstatusValueEnumMap[
+          reader.readStringOrNull(offsets[14])] ??
+      ReservationStatus.reserved;
   object.updatedAt = reader.readDateTimeOrNull(offsets[16]);
   object.year = reader.readLong(offsets[17]);
   return object;
@@ -9834,7 +9837,9 @@ P _fundingTransactionDeserializeProp<P>(
     case 13:
       return (reader.readStringOrNull(offset)) as P;
     case 14:
-      return (reader.readString(offset)) as P;
+      return (_FundingTransactionstatusValueEnumMap[
+              reader.readStringOrNull(offset)] ??
+          ReservationStatus.reserved) as P;
     case 15:
       return (reader.readString(offset)) as P;
     case 16:
@@ -9845,6 +9850,19 @@ P _fundingTransactionDeserializeProp<P>(
       throw IsarError('Unknown property with id $propertyId');
   }
 }
+
+const _FundingTransactionstatusEnumValueMap = {
+  r'reserved': r'reserved',
+  r'approved': r'approved',
+  r'cancelled': r'cancelled',
+  r'spent': r'spent',
+};
+const _FundingTransactionstatusValueEnumMap = {
+  r'reserved': ReservationStatus.reserved,
+  r'approved': ReservationStatus.approved,
+  r'cancelled': ReservationStatus.cancelled,
+  r'spent': ReservationStatus.spent,
+};
 
 Id _fundingTransactionGetId(FundingTransaction object) {
   return object.id;
@@ -10346,7 +10364,7 @@ extension FundingTransactionQueryWhere
   }
 
   QueryBuilder<FundingTransaction, FundingTransaction, QAfterWhereClause>
-      statusEqualTo(String status) {
+      statusEqualTo(ReservationStatus status) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
         indexName: r'status',
@@ -10356,7 +10374,7 @@ extension FundingTransactionQueryWhere
   }
 
   QueryBuilder<FundingTransaction, FundingTransaction, QAfterWhereClause>
-      statusNotEqualTo(String status) {
+      statusNotEqualTo(ReservationStatus status) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
@@ -12193,7 +12211,7 @@ extension FundingTransactionQueryFilter
 
   QueryBuilder<FundingTransaction, FundingTransaction, QAfterFilterCondition>
       statusEqualTo(
-    String value, {
+    ReservationStatus value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -12207,7 +12225,7 @@ extension FundingTransactionQueryFilter
 
   QueryBuilder<FundingTransaction, FundingTransaction, QAfterFilterCondition>
       statusGreaterThan(
-    String value, {
+    ReservationStatus value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
@@ -12223,7 +12241,7 @@ extension FundingTransactionQueryFilter
 
   QueryBuilder<FundingTransaction, FundingTransaction, QAfterFilterCondition>
       statusLessThan(
-    String value, {
+    ReservationStatus value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
@@ -12239,8 +12257,8 @@ extension FundingTransactionQueryFilter
 
   QueryBuilder<FundingTransaction, FundingTransaction, QAfterFilterCondition>
       statusBetween(
-    String lower,
-    String upper, {
+    ReservationStatus lower,
+    ReservationStatus upper, {
     bool includeLower = true,
     bool includeUpper = true,
     bool caseSensitive = true,
@@ -13360,7 +13378,8 @@ extension FundingTransactionQueryProperty
     });
   }
 
-  QueryBuilder<FundingTransaction, String, QQueryOperations> statusProperty() {
+  QueryBuilder<FundingTransaction, ReservationStatus, QQueryOperations>
+      statusProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'status');
     });

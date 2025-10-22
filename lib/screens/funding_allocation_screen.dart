@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:isar/isar.dart';
 import 'package:provider/provider.dart';
 import '../models/funding_models.dart';
 import '../models/organization.dart';
@@ -9,7 +10,8 @@ class FundingAllocationScreen extends StatefulWidget {
   const FundingAllocationScreen({super.key});
 
   @override
-  State<FundingAllocationScreen> createState() => _FundingAllocationScreenState();
+  State<FundingAllocationScreen> createState() =>
+      _FundingAllocationScreenState();
 }
 
 class _FundingAllocationScreenState extends State<FundingAllocationScreen> {
@@ -17,17 +19,23 @@ class _FundingAllocationScreenState extends State<FundingAllocationScreen> {
   int? _selectedMonth;
   String _selectedFundingType = 'سنوي';
   FundingCategory? _selectedCategory;
-  
+
   // متغيرات للتنقل الهرمي متعدد المستويات
-  int _currentLevel = 0; // المستوى الحالي (0 = رئيسي، 1 = فرعي، 2 = فرعي من الفرعي...)
+  int _currentLevel =
+      0; // المستوى الحالي (0 = رئيسي، 1 = فرعي، 2 = فرعي من الفرعي...)
   List<FundingCategory> _navigationPath = []; // مسار التنقل الحالي
   FundingCategory? _currentParent; // الباب الأعلى الحالي
-  
+
   final _amountController = TextEditingController();
-  
+
   List<FundingCategory> _categories = [];
   List<InstitutionFunding> _allocations = [];
   Organization? _mainInstitution;
+
+  // متغيرات تحسين الأداء وتجربة المستخدم
+  bool _isLoading = false;
+  String? _lastError;
+  final Map<int, List<FundingCategory>> _childrenCache = {};
 
   @override
   void initState() {
@@ -42,85 +50,112 @@ class _FundingAllocationScreenState extends State<FundingAllocationScreen> {
   }
 
   Future<void> _loadData() async {
+    if (_isLoading) return; // منع التحميل المتكرر
+
+    setState(() {
+      _isLoading = true;
+      _lastError = null;
+    });
+
     try {
       // إنشاء بيانات تجريبية إذا لم تكن موجودة
       await DatabaseService.createSampleFundingCategories();
 
       // تحميل المؤسسة الرئيسية
-      final orgProvider = Provider.of<OrganizationProvider>(context, listen: false);
+      final orgProvider = Provider.of<OrganizationProvider>(
+        context,
+        listen: false,
+      );
       _mainInstitution = orgProvider.organization;
-      print('Debug: Main institution = ${_mainInstitution?.departmentName}');
 
-      // تحميل الفئات والتخصيصات
+      // تحميل جميع الفئات
       _categories = await DatabaseService.getAllFundingCategories();
-      _allocations = await DatabaseService.getInstitutionFundingByYear(_selectedYear);
-      
-      print('Debug: Loaded ${_categories.length} categories');
-      print('Debug: Loaded ${_allocations.length} allocations');
-      
-      for (final cat in _categories.take(5)) {
-        print('Debug: Category: ${cat.name}, ParentId: ${cat.parentId}');
+
+      // تحميل التخصيصات حسب نوع التمويل
+      if (_selectedFundingType == 'سنوي') {
+        _allocations = await DatabaseService.getInstitutionFundingByYear(
+          _selectedYear,
+        );
+      } else if (_selectedFundingType == 'شهري') {
+        if (_selectedMonth != null) {
+          _allocations = await DatabaseService.getInstitutionFundingByYearMonth(
+            _selectedYear,
+            _selectedMonth!,
+          );
+        } else {
+          _allocations = []; // لم يتم اختيار الشهر بعد
+        }
       }
 
-      setState(() {});
+      // مسح التخزين المؤقت عند تحميل بيانات جديدة
+      _childrenCache.clear();
+
+      if (mounted) {
+        setState(() {});
+      }
     } catch (e) {
-      print('خطأ في تحميل البيانات: $e');
+      _lastError = 'خطأ في تحميل البيانات: $e';
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(_lastError!)));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   // دوال مساعدة للتنقل الهرمي
-  
-  /// الحصول على الأطفال المباشرين لفئة محددة
+
+  /// الحصول على الأطفال المباشرين لفئة محددة مع التخزين المؤقت
   List<FundingCategory> _getDirectChildren(FundingCategory? parent) {
+    final parentId = parent?.id ?? 0;
+
+    // التحقق من التخزين المؤقت أولاً
+    if (_childrenCache.containsKey(parentId)) {
+      return _childrenCache[parentId]!;
+    }
+
+    List<FundingCategory> children;
     if (parent == null) {
       // إرجاع الفئات الرئيسية
-      final rootCategories = _categories.where((category) => category.parentId == null).toList();
-      print('Debug: _getDirectChildren(null) returning ${rootCategories.length} root categories');
-      for (final cat in rootCategories) {
-        print('Debug: Root category: ${cat.name}');
-      }
-      return rootCategories;
+      children = _categories
+          .where((category) => category.parentId == null)
+          .toList();
+    } else {
+      // إرجاع الأطفال المباشرين
+      children = _categories
+          .where((category) => category.parentId == parent.id)
+          .toList();
     }
-    
-    final children = _categories.where((category) => category.parentId == parent.id).toList();
-    print('Debug: _getDirectChildren(${parent.name}) returning ${children.length} children');
-    for (final cat in children) {
-      print('Debug: Child category: ${cat.name}');
-    }
+
+    // حفظ في التخزين المؤقت
+    _childrenCache[parentId] = children;
     return children;
   }
 
   /// الحصول على فئات المستوى الحالي
   List<FundingCategory> _getCurrentLevelCategories() {
-    print('Debug: Getting current level categories');
-    print('Debug: _currentParent = ${_currentParent?.name ?? 'null'}');
-    print('Debug: Total categories = ${_categories.length}');
-    
-    // طباعة جميع الفئات المتاحة لأغراض debug
-    for (final cat in _categories) {
-      print('Debug: Available category: ${cat.name}, ParentId: ${cat.parentId}');
+    if (_currentLevel == 0) {
+      // في المستوى الرئيسي - اعرض دائماً الفئات الرئيسية فقط
+      return _getDirectChildren(null);
+    } else {
+      // في المستويات الفرعية - اعرض الأطفال المباشرين
+      return _getDirectChildren(_currentParent);
     }
-    
-    // في النظام الجديد، نعرض جميع الفئات المناسبة للمستوى الحالي
-    // بغض النظر عن نوع التمويل (سيتم تحديد نوع التمويل عند التخصيص)
-    
-    final directChildren = _getDirectChildren(_currentParent);
-    print('Debug: Direct children count = ${directChildren.length}');
-    
-    // إرجاع جميع الفئات في المستوى الحالي
-    print('Debug: Returning ${directChildren.length} categories');
-    for (final cat in directChildren) {
-      print('Debug: Final category: ${cat.name}');
-    }
-    
-    return directChildren;
   }
 
   /// حساب إجمالي التخصيصات للأبواب الفرعية
-  Future<double> _getSubCategoriesAllocatedTotal(FundingCategory parentCategory) async {
+  Future<double> _getSubCategoriesAllocatedTotal(
+    FundingCategory parentCategory,
+  ) async {
     final children = _getDirectChildren(parentCategory);
     double total = 0;
-    
+
     for (final child in children) {
       final allocation = _allocations.firstWhere(
         (alloc) => alloc.categoryId == child.id,
@@ -128,23 +163,26 @@ class _FundingAllocationScreenState extends State<FundingAllocationScreen> {
       );
       total += allocation.allocatedAmount;
     }
-    
+
     return total;
   }
 
   /// حساب المبلغ المتاح للتوزيع من الباب الأعلى
-  Future<double> _getAvailableAmountForDistribution(FundingCategory parentCategory) async {
+  Future<double> _getAvailableAmountForDistribution(
+    FundingCategory parentCategory,
+  ) async {
     final parentAllocation = _allocations.firstWhere(
       (alloc) => alloc.categoryId == parentCategory.id,
       orElse: () => InstitutionFunding()..allocatedAmount = 0,
     );
-    
-    final subCategoriesTotal = await _getSubCategoriesAllocatedTotal(parentCategory);
+
+    final subCategoriesTotal = await _getSubCategoriesAllocatedTotal(
+      parentCategory,
+    );
     return parentAllocation.allocatedAmount - subCategoriesTotal;
   }
 
   // دوال التخصيص
-  
   Future<void> _allocateFunding() async {
     if (_selectedCategory == null) {
       _showSnackBar('يرجى اختيار الفئة');
@@ -156,7 +194,6 @@ class _FundingAllocationScreenState extends State<FundingAllocationScreen> {
       return;
     }
 
-    // التحقق من نوع التمويل والشهر للتمويل الشهري
     if (_selectedFundingType.isEmpty) {
       _showSnackBar('يرجى اختيار نوع التمويل');
       return;
@@ -173,49 +210,63 @@ class _FundingAllocationScreenState extends State<FundingAllocationScreen> {
       return;
     }
 
-    // التحقق من المبلغ المتاح إذا كنا في مستوى فرعي
-    if (_currentLevel > 0 && _currentParent != null) {
-      final availableAmount = await _getAvailableAmountForDistribution(_currentParent!);
-      
-      // البحث عن التخصيص الحالي بنفس الفئة ونوع التمويل والسنة والشهر
-      final existingAllocation = _allocations.firstWhere(
-        (alloc) => alloc.categoryId == _selectedCategory!.id &&
-                   alloc.fundingType == _selectedFundingType &&
-                   alloc.year == _selectedYear &&
-                   (_selectedFundingType == 'سنوي' || alloc.month == _selectedMonth),
-        orElse: () => InstitutionFunding()..allocatedAmount = 0,
-      );
-      
-      final additionalAmount = amount - existingAllocation.allocatedAmount;
-      
-      if (additionalAmount > availableAmount) {
-        _showSnackBar('المبلغ المطلوب يتجاوز المتاح للتوزيع. المتاح: ${availableAmount.toStringAsFixed(0)} د.ع');
-        return;
-      }
-    }
-
     try {
-      // البحث عن التخصيص الموجود
-      final existingAllocation = _allocations.firstWhere(
-        (alloc) => alloc.categoryId == _selectedCategory!.id &&
-                   alloc.fundingType == _selectedFundingType &&
-                   alloc.year == _selectedYear &&
-                   (_selectedFundingType == 'سنوي' || alloc.month == _selectedMonth),
-        orElse: () => InstitutionFunding(),
-      );
-
-      if (existingAllocation.id != 0) {
-        // تحديث التخصيص الموجود
-        final updatedAllocation = existingAllocation.copyWith(
-          allocatedAmount: amount,
-          updatedAt: DateTime.now(),
+      // ✅ التحقق من المبلغ المتاح
+      if (_currentLevel > 0 && _currentParent != null) {
+        final availableAmount = await _getAvailableAmountForDistribution(
+          _currentParent!,
         );
-        
+
+        var query = DatabaseService.isar.institutionFundings
+            .filter()
+            .categoryIdEqualTo(_selectedCategory!.id)
+            .fundingTypeEqualTo(_selectedFundingType)
+            .yearEqualTo(_selectedYear);
+
+        if (_selectedFundingType == 'شهري') {
+          query = query.monthEqualTo(_selectedMonth!);
+        }
+
+        final existingAlloc = await query.findFirst();
+
+        final existingAmount = existingAlloc?.allocatedAmount ?? 0;
+        final additionalAmount = amount - existingAmount;
+
+        if (additionalAmount > availableAmount) {
+          _showSnackBar(
+            'المبلغ المطلوب يتجاوز المتاح للتوزيع. المتاح: ${availableAmount.toStringAsFixed(0)} د.ع',
+          );
+          return;
+        }
+      }
+
+      var existingQuery = DatabaseService.isar.institutionFundings
+          .filter()
+          .categoryIdEqualTo(_selectedCategory!.id)
+          .fundingTypeEqualTo(_selectedFundingType)
+          .yearEqualTo(_selectedYear);
+
+      if (_selectedFundingType == 'شهري') {
+        existingQuery = existingQuery.monthEqualTo(_selectedMonth!);
+      }
+
+      final existingAllocation = await existingQuery.findFirst();
+
+      if (existingAllocation != null) {
+        // ✅ تحديث الموجود
+        existingAllocation
+          ..allocatedAmount = amount
+          ..updatedAt = DateTime.now();
+
         await DatabaseService.isar.writeTxn(() async {
-          await DatabaseService.isar.institutionFundings.put(updatedAllocation);
+          await DatabaseService.isar.institutionFundings.put(
+            existingAllocation,
+          );
         });
+
+        print("✅ تم تحديث التخصيص الموجود بنجاح ID: ${existingAllocation.id}");
       } else {
-        // إنشاء تخصيص جديد
+        // ✅ إنشاء تخصيص جديد
         final newAllocation = InstitutionFunding()
           ..institutionId = _mainInstitution!.id
           ..categoryId = _selectedCategory!.id
@@ -227,28 +278,39 @@ class _FundingAllocationScreenState extends State<FundingAllocationScreen> {
           ..month = _selectedFundingType == 'شهري' ? _selectedMonth : null
           ..createdAt = DateTime.now()
           ..updatedAt = DateTime.now();
-        
+
         await DatabaseService.isar.writeTxn(() async {
           await DatabaseService.isar.institutionFundings.put(newAllocation);
         });
+
+        print("✅ تم إنشاء تخصيص جديد ID: ${newAllocation.id}");
       }
 
-      _amountController.clear();
+      // ✅ إعادة تحميل البيانات بعد الإضافة
+      print("🔄 إعادة تحميل البيانات...");
+      await _loadData();
+
+      // ✅ إعادة تعيين الحقول بعد التحديث
       setState(() {
+        _amountController.clear();
         _selectedCategory = null;
       });
-      
-      await _loadData();
-      _showSnackBar('تم ${_currentLevel == 0 ? 'تخصيص' : 'توزيع'} التمويل بنجاح');
-      
+
+      _showSnackBar(
+        'تم ${_currentLevel == 0 ? 'تخصيص' : 'توزيع'} التمويل بنجاح',
+      );
     } catch (e) {
-      _showSnackBar('خطأ في ${_currentLevel == 0 ? 'تخصيص' : 'توزيع'} التمويل: $e');
+      _showSnackBar(
+        '❌ خطأ في ${_currentLevel == 0 ? 'تخصيص' : 'توزيع'} التمويل: $e',
+      );
     }
   }
 
   Future<void> _deleteAllocation(InstitutionFunding allocation) async {
     if (allocation.spentAmount > 0 || allocation.reservedAmount > 0) {
-      _showSnackBar('لا يمكن حذف التخصيص لأنه يحتوي على مبالغ مصروفة أو محجوزة');
+      _showSnackBar(
+        'لا يمكن حذف التخصيص لأنه يحتوي على مبالغ مصروفة أو محجوزة',
+      );
       return;
     }
 
@@ -265,28 +327,42 @@ class _FundingAllocationScreenState extends State<FundingAllocationScreen> {
   }
 
   // دوال الواجهة
-  
+
   String _getCurrentLevelName() {
     switch (_currentLevel) {
-      case 0: return 'الأبواب الرئيسية';
-      case 1: return 'الأبواب الفرعية';
-      case 2: return 'الأبواب الفرعية من الدرجة الثانية';
-      default: return 'المستوى ${_currentLevel + 1}';
+      case 0:
+        return 'الأبواب الرئيسية';
+      case 1:
+        return 'الأبواب الفرعية';
+      case 2:
+        return 'الأبواب الفرعية من الدرجة الثانية';
+      default:
+        return 'المستوى ${_currentLevel + 1}';
     }
   }
 
   String _getMonthName(int month) {
     const months = [
-      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+      'يناير',
+      'فبراير',
+      'مارس',
+      'أبريل',
+      'مايو',
+      'يونيو',
+      'يوليو',
+      'أغسطس',
+      'سبتمبر',
+      'أكتوبر',
+      'نوفمبر',
+      'ديسمبر',
     ];
     return months[month - 1];
   }
 
   void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   /// بناء شريط التنقل (Breadcrumb)
@@ -315,7 +391,9 @@ class _FundingAllocationScreenState extends State<FundingAllocationScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: _currentLevel == 0 ? Colors.blue[600] : Colors.blue[200],
+                  color: _currentLevel == 0
+                      ? Colors.blue[600]
+                      : Colors.blue[200],
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
@@ -328,13 +406,13 @@ class _FundingAllocationScreenState extends State<FundingAllocationScreen> {
                 ),
               ),
             ),
-            
+
             // مسار التنقل
             ..._navigationPath.asMap().entries.map((entry) {
               final index = entry.key;
               final category = entry.value;
               final isLast = index == _navigationPath.length - 1;
-              
+
               return Row(
                 children: [
                   const Icon(Icons.chevron_right, size: 16, color: Colors.grey),
@@ -348,7 +426,10 @@ class _FundingAllocationScreenState extends State<FundingAllocationScreen> {
                       });
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: isLast ? Colors.blue[600] : Colors.blue[200],
                         borderRadius: BorderRadius.circular(4),
@@ -375,8 +456,7 @@ class _FundingAllocationScreenState extends State<FundingAllocationScreen> {
   /// بناء نموذج التخصيص
   Widget _buildAllocationForm() {
     final currentCategories = _getCurrentLevelCategories();
-    print('Debug: Form received ${currentCategories.length} current categories');
-    
+
     return Card(
       margin: const EdgeInsets.all(16),
       child: Padding(
@@ -413,7 +493,7 @@ class _FundingAllocationScreenState extends State<FundingAllocationScreen> {
                   );
                 },
               ),
-            
+
             // نموذج الإدخال
             Wrap(
               spacing: 16,
@@ -429,20 +509,25 @@ class _FundingAllocationScreenState extends State<FundingAllocationScreen> {
                         labelText: 'نوع التمويل',
                         border: OutlineInputBorder(),
                       ),
-                      items: ['سنوي', 'شهري'].map((type) => DropdownMenuItem(
-                        value: type,
-                        child: Text(type),
-                      )).toList(),
+                      items: ['سنوي', 'شهري']
+                          .map(
+                            (type) => DropdownMenuItem(
+                              value: type,
+                              child: Text(type),
+                            ),
+                          )
+                          .toList(),
                       onChanged: (value) {
                         setState(() {
                           _selectedFundingType = value!;
                           if (value == 'سنوي') _selectedMonth = null;
                           _selectedCategory = null;
+                          _loadData();
                         });
                       },
                     ),
                   ),
-                
+
                 // اختيار الشهر (فقط للتمويل الشهري في المستوى الرئيسي)
                 if (_currentLevel == 0 && _selectedFundingType == 'شهري')
                   SizedBox(
@@ -453,49 +538,60 @@ class _FundingAllocationScreenState extends State<FundingAllocationScreen> {
                         labelText: 'الشهر',
                         border: OutlineInputBorder(),
                       ),
-                      items: List.generate(12, (index) => DropdownMenuItem(
-                        value: index + 1,
-                        child: Text(_getMonthName(index + 1)),
-                      )),
+                      items: List.generate(
+                        12,
+                        (index) => DropdownMenuItem(
+                          value: index + 1,
+                          child: Text(_getMonthName(index + 1)),
+                        ),
+                      ),
                       onChanged: (value) {
                         setState(() {
                           _selectedMonth = value;
                           _selectedCategory = null;
+                          _loadData();
                         });
                       },
                     ),
                   ),
-                
+
                 // اختيار الفئة
                 SizedBox(
                   width: 300,
                   child: DropdownButtonFormField<FundingCategory>(
-                    value: currentCategories.contains(_selectedCategory) ? _selectedCategory : null,
+                    value: currentCategories.contains(_selectedCategory)
+                        ? _selectedCategory
+                        : null,
                     decoration: InputDecoration(
                       labelText: _getCurrentLevelName(),
                       border: const OutlineInputBorder(),
                     ),
                     items: currentCategories.isEmpty
-                      ? [DropdownMenuItem(
-                        value: null,
-                        child: Text('لا توجد فئات متاحة', style: TextStyle(color: Colors.grey)),
-                      )]
-                    : currentCategories.map((category) {
-                        print('Debug: Dropdown item: ${category.name} (id: ${category.id})');
-                        return DropdownMenuItem(
-                          value: category,
-                          child: Text(category.name),
-                        );
-                      }).toList(),
-                    onChanged: currentCategories.isEmpty ? null : (value) {
-                      print('Debug: Category selected: ${value?.name}');
-                      setState(() {
-                        _selectedCategory = value;
-                      });
-                    },
+                        ? [
+                            DropdownMenuItem(
+                              value: null,
+                              child: Text(
+                                'لا توجد فئات متاحة',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ),
+                          ]
+                        : currentCategories.map((category) {
+                            return DropdownMenuItem(
+                              value: category,
+                              child: Text(category.name),
+                            );
+                          }).toList(),
+                    onChanged: currentCategories.isEmpty
+                        ? null
+                        : (value) {
+                            setState(() {
+                              _selectedCategory = value;
+                            });
+                          },
                   ),
                 ),
-                
+
                 // مبلغ التخصيص
                 SizedBox(
                   width: 200,
@@ -509,14 +605,19 @@ class _FundingAllocationScreenState extends State<FundingAllocationScreen> {
                     keyboardType: TextInputType.number,
                   ),
                 ),
-                
+
                 // زر التخصيص
                 ElevatedButton(
                   onPressed: _allocateFunding,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _currentLevel == 0 ? Colors.green : Colors.orange,
+                    backgroundColor: _currentLevel == 0
+                        ? Colors.green
+                        : Colors.orange,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
                   ),
                   child: Text(_currentLevel == 0 ? 'تخصيص' : 'توزيع'),
                 ),
@@ -529,9 +630,12 @@ class _FundingAllocationScreenState extends State<FundingAllocationScreen> {
   }
 
   /// بناء بطاقة التخصيص
-  Widget _buildAllocationCard(InstitutionFunding allocation, FundingCategory category) {
+  Widget _buildAllocationCard(
+    InstitutionFunding allocation,
+    FundingCategory category,
+  ) {
     final hasChildren = _getDirectChildren(category).isNotEmpty;
-    
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: hasChildren
@@ -541,7 +645,10 @@ class _FundingAllocationScreenState extends State<FundingAllocationScreen> {
   }
 
   /// بناء بطاقة تخصيص قابلة للتوسيع (للفئات التي لها أطفال)
-  Widget _buildExpandableAllocationCard(InstitutionFunding allocation, FundingCategory category) {
+  Widget _buildExpandableAllocationCard(
+    InstitutionFunding allocation,
+    FundingCategory category,
+  ) {
     return FutureBuilder<double>(
       future: _getSubCategoriesAllocatedTotal(category),
       builder: (context, subTotalSnapshot) {
@@ -550,7 +657,9 @@ class _FundingAllocationScreenState extends State<FundingAllocationScreen> {
 
         return ExpansionTile(
           title: Text(category.name),
-          subtitle: Text('النوع: ${allocation.fundingType} - السنة: ${allocation.year}'),
+          subtitle: Text(
+            'النوع: ${allocation.fundingType} - السنة: ${allocation.year}',
+          ),
           trailing: SizedBox(
             width: 120,
             child: Column(
@@ -574,8 +683,8 @@ class _FundingAllocationScreenState extends State<FundingAllocationScreen> {
                 Text(
                   'متبقي: ${remaining.toStringAsFixed(0)}',
                   style: TextStyle(
-                    fontSize: 10, 
-                    color: remaining > 0 ? Colors.green : Colors.red
+                    fontSize: 10,
+                    color: remaining > 0 ? Colors.green : Colors.red,
                   ),
                 ),
               ],
@@ -623,7 +732,10 @@ class _FundingAllocationScreenState extends State<FundingAllocationScreen> {
   }
 
   /// بناء بطاقة تخصيص بسيطة (للفئات التي ليس لها أطفال)
-  Widget _buildSimpleAllocationCard(InstitutionFunding allocation, FundingCategory category) {
+  Widget _buildSimpleAllocationCard(
+    InstitutionFunding allocation,
+    FundingCategory category,
+  ) {
     return ListTile(
       title: Text(category.name),
       subtitle: Column(
@@ -678,7 +790,7 @@ class _FundingAllocationScreenState extends State<FundingAllocationScreen> {
         (c) => c.id == allocation.categoryId,
         orElse: () => FundingCategory(),
       );
-      
+
       if (_currentLevel == 0) {
         return category.parentId == null;
       } else {
@@ -724,49 +836,65 @@ class _FundingAllocationScreenState extends State<FundingAllocationScreen> {
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
       ),
-      body: Column(
-        children: [
-          // شريط المعلومات ومسار التنقل
-          Card(
-            margin: const EdgeInsets.all(16),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+      body: _isLoading
+          ? const Center(
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // مسار التنقل (Breadcrumb)
-                  if (_navigationPath.isNotEmpty) 
-                    _buildNavigationBreadcrumb(),
-                  
-                  if (_navigationPath.isNotEmpty) const SizedBox(height: 8),
-                  
-                  // معلومات أساسية
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'المؤسسة: ${_mainInstitution?.departmentName ?? 'غير محدد'}',
-                        style: const TextStyle(fontSize: 14, color: Colors.grey),
-                      ),
-                      Text(
-                        'السنة: $_selectedYear | المستوى: ${_getCurrentLevelName()}',
-                        style: const TextStyle(fontSize: 14, color: Colors.grey),
-                      ),
-                    ],
-                  ),
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('جاري تحميل البيانات...'),
                 ],
               ),
+            )
+          : Column(
+              children: [
+                // شريط المعلومات ومسار التنقل
+                Card(
+                  margin: const EdgeInsets.all(16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        // مسار التنقل (Breadcrumb)
+                        if (_navigationPath.isNotEmpty)
+                          _buildNavigationBreadcrumb(),
+
+                        if (_navigationPath.isNotEmpty)
+                          const SizedBox(height: 8),
+
+                        // معلومات أساسية
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'المؤسسة: ${_mainInstitution?.departmentName ?? 'غير محدد'}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            Text(
+                              'السنة: $_selectedYear | المستوى: ${_getCurrentLevelName()}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // نموذج التخصيص
+                _buildAllocationForm(),
+
+                // قائمة التخصيصات الحالية
+                Expanded(child: _buildCurrentLevelList()),
+              ],
             ),
-          ),
-          
-          // نموذج التخصيص
-          _buildAllocationForm(),
-          
-          // قائمة التخصيصات الحالية
-          Expanded(
-            child: _buildCurrentLevelList(),
-          ),
-        ],
-      ),
     );
   }
 }

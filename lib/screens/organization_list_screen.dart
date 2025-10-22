@@ -68,8 +68,8 @@ class _OrganizationListScreenState extends State<OrganizationListScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _organizations.isEmpty
-              ? _buildEmptyState()
-              : _buildOrganizationsList(),
+          ? _buildEmptyState()
+          : _buildOrganizationsList(),
     );
   }
 
@@ -78,24 +78,20 @@ class _OrganizationListScreenState extends State<OrganizationListScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.business,
-            size: 80,
-            color: Colors.grey[400],
-          ),
+          Icon(Icons.business, size: 80, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
             'لا توجد مؤسسات مسجلة',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: Colors.grey[600],
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(color: Colors.grey[600]),
           ),
           const SizedBox(height: 8),
           Text(
             'اضغط على الزر أدناه لإضافة مؤسسة جديدة',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[500],
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
@@ -161,18 +157,16 @@ class _OrganizationListScreenState extends State<OrganizationListScreen> {
                       children: [
                         Text(
                           organization.departmentName ?? 'غير محدد',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
                           textDirection: TextDirection.rtl,
                         ),
                         if (organization.directorName != null) ...[
                           const SizedBox(height: 4),
                           Text(
                             'المدير: ${organization.directorName}',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.grey[600],
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: Colors.grey[600]),
                             textDirection: TextDirection.rtl,
                           ),
                         ],
@@ -180,7 +174,8 @@ class _OrganizationListScreenState extends State<OrganizationListScreen> {
                     ),
                   ),
                   PopupMenuButton<String>(
-                    onSelected: (value) => _handleMenuAction(value, organization),
+                    onSelected: (value) =>
+                        _handleMenuAction(value, organization),
                     itemBuilder: (context) => [
                       const PopupMenuItem(
                         value: 'edit',
@@ -194,7 +189,10 @@ class _OrganizationListScreenState extends State<OrganizationListScreen> {
                         value: 'delete',
                         child: ListTile(
                           leading: Icon(Icons.delete, color: Colors.red),
-                          title: Text('حذف', style: TextStyle(color: Colors.red)),
+                          title: Text(
+                            'حذف',
+                            style: TextStyle(color: Colors.red),
+                          ),
                           contentPadding: EdgeInsets.zero,
                         ),
                       ),
@@ -202,16 +200,16 @@ class _OrganizationListScreenState extends State<OrganizationListScreen> {
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // معلومات المؤسسة
               _buildInfoRow(
                 icon: Icons.work,
                 label: 'المنصب',
                 value: organization.jobTitle ?? 'غير محدد',
               ),
-              
+
               if (organization.bankName != null) ...[
                 const SizedBox(height: 8),
                 _buildInfoRow(
@@ -220,7 +218,7 @@ class _OrganizationListScreenState extends State<OrganizationListScreen> {
                   value: organization.bankName!,
                 ),
               ],
-              
+
               if (organization.iban != null) ...[
                 const SizedBox(height: 8),
                 _buildInfoRow(
@@ -230,7 +228,7 @@ class _OrganizationListScreenState extends State<OrganizationListScreen> {
                   isMonospace: true,
                 ),
               ],
-              
+
               if (organization.positionType != null) ...[
                 const SizedBox(height: 8),
                 _buildInfoRow(
@@ -239,7 +237,7 @@ class _OrganizationListScreenState extends State<OrganizationListScreen> {
                   value: organization.positionType!,
                 ),
               ],
-              
+
               // تاريخ الإنشاء والتحديث
               const SizedBox(height: 12),
               const Divider(),
@@ -249,17 +247,17 @@ class _OrganizationListScreenState extends State<OrganizationListScreen> {
                   if (organization.createdAt != null)
                     Text(
                       'أنشئت: ${_formatDate(organization.createdAt!)}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[500],
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
                       textDirection: TextDirection.rtl,
                     ),
                   if (organization.updatedAt != null)
                     Text(
                       'آخر تحديث: ${_formatDate(organization.updatedAt!)}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[500],
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
                       textDirection: TextDirection.rtl,
                     ),
                 ],
@@ -308,9 +306,7 @@ class _OrganizationListScreenState extends State<OrganizationListScreen> {
 
   Future<void> _addNewOrganization() async {
     final result = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (context) => const OrganizationFormScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const OrganizationFormScreen()),
     );
 
     if (result == true) {
@@ -321,7 +317,8 @@ class _OrganizationListScreenState extends State<OrganizationListScreen> {
   Future<void> _editOrganization(Organization organization) async {
     final result = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (context) => OrganizationFormScreen(organization: organization),
+        builder: (context) =>
+            OrganizationFormScreen(organization: organization),
       ),
     );
 
@@ -386,7 +383,7 @@ class _OrganizationListScreenState extends State<OrganizationListScreen> {
   Future<void> _deleteOrganization(Organization organization) async {
     try {
       await DatabaseService.deleteOrganization(organization.id);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

@@ -8,7 +8,8 @@ class OverdueReservationsScreen extends StatefulWidget {
   const OverdueReservationsScreen({super.key});
 
   @override
-  State<OverdueReservationsScreen> createState() => _OverdueReservationsScreenState();
+  State<OverdueReservationsScreen> createState() =>
+      _OverdueReservationsScreenState();
 }
 
 class _OverdueReservationsScreenState extends State<OverdueReservationsScreen> {
@@ -33,8 +34,9 @@ class _OverdueReservationsScreenState extends State<OverdueReservationsScreen> {
 
     try {
       // تحميل الحجوزات المتأخرة
-      final overdueReservations = await NotificationService.getOverdueReservations();
-      
+      final overdueReservations =
+          await NotificationService.getOverdueReservations();
+
       // تحميل الأبواب والمؤسسات
       final categories = await DatabaseService.getAllFundingCategories();
       final institutions = await DatabaseService.getAllInstitutions();
@@ -98,19 +100,19 @@ class _OverdueReservationsScreenState extends State<OverdueReservationsScreen> {
     if (confirmed == true) {
       try {
         final updatedReservation = reservation.copyWith(
-          status: 'cancelled',
+          status: ReservationStatus.cancelled,
           updatedAt: DateTime.now(),
         );
-        
+
         await DatabaseService.saveFundingTransaction(updatedReservation);
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('تم إلغاء الحجز بنجاح'),
             backgroundColor: Colors.green,
           ),
         );
-        
+
         // إعادة تحميل البيانات
         _loadData();
       } catch (e) {
@@ -179,10 +181,7 @@ class _OverdueReservationsScreenState extends State<OverdueReservationsScreen> {
               textAlign: TextAlign.center,
             ),
             SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadData,
-              child: Text('إعادة المحاولة'),
-            ),
+            ElevatedButton(onPressed: _loadData, child: Text('إعادة المحاولة')),
           ],
         ),
       );
@@ -193,11 +192,7 @@ class _OverdueReservationsScreenState extends State<OverdueReservationsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.check_circle_outline,
-              size: 64,
-              color: Colors.green,
-            ),
+            Icon(Icons.check_circle_outline, size: 64, color: Colors.green),
             SizedBox(height: 16),
             Text(
               'لا توجد حجوزات متأخرة',
@@ -222,7 +217,7 @@ class _OverdueReservationsScreenState extends State<OverdueReservationsScreen> {
       children: [
         // إحصائيات سريعة
         _buildStatisticsCard(),
-        
+
         // قائمة الحجوزات المتأخرة
         Expanded(
           child: ListView.builder(
@@ -230,10 +225,16 @@ class _OverdueReservationsScreenState extends State<OverdueReservationsScreen> {
             itemCount: _overdueReservations.length,
             itemBuilder: (context, index) {
               final reservation = _overdueReservations[index];
-              final categoryName = _categories[reservation.categoryId]?.name ?? 'غير محدد';
-              final institutionName = _institutions[reservation.institutionId]?.name ?? 'غير محدد';
-              
-              return _buildReservationCard(reservation, categoryName, institutionName);
+              final categoryName =
+                  _categories[reservation.categoryId]?.name ?? 'غير محدد';
+              final institutionName =
+                  _institutions[reservation.institutionId]?.name ?? 'غير محدد';
+
+              return _buildReservationCard(
+                reservation,
+                categoryName,
+                institutionName,
+              );
             },
           ),
         ),
@@ -249,14 +250,16 @@ class _OverdueReservationsScreenState extends State<OverdueReservationsScreen> {
     );
 
     final oldestReservation = _overdueReservations.isNotEmpty
-        ? _overdueReservations.reduce((a, b) => 
-            a.requestDate!.isBefore(b.requestDate!) ? a : b)
+        ? _overdueReservations.reduce(
+            (a, b) => a.requestDate!.isBefore(b.requestDate!) ? a : b,
+          )
         : null;
 
     final averageDaysOverdue = _overdueReservations.isNotEmpty
         ? _overdueReservations
-            .map((r) => DateTime.now().difference(r.requestDate!).inDays)
-            .reduce((a, b) => a + b) / _overdueReservations.length
+                  .map((r) => DateTime.now().difference(r.requestDate!).inDays)
+                  .reduce((a, b) => a + b) /
+              _overdueReservations.length
         : 0.0;
 
     return Container(
@@ -321,7 +324,7 @@ class _OverdueReservationsScreenState extends State<OverdueReservationsScreen> {
               Expanded(
                 child: _buildStatItem(
                   'أقدم حجز',
-                  oldestReservation != null 
+                  oldestReservation != null
                       ? '${DateTime.now().difference(oldestReservation.requestDate!).inDays} يوم'
                       : '0',
                   Icons.history,
@@ -335,7 +338,12 @@ class _OverdueReservationsScreenState extends State<OverdueReservationsScreen> {
     );
   }
 
-  Widget _buildStatItem(String title, String value, IconData icon, Color color) {
+  Widget _buildStatItem(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -363,10 +371,7 @@ class _OverdueReservationsScreenState extends State<OverdueReservationsScreen> {
           ),
           Text(
             title,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             textAlign: TextAlign.center,
           ),
         ],
@@ -380,7 +385,9 @@ class _OverdueReservationsScreenState extends State<OverdueReservationsScreen> {
     String categoryName,
     String institutionName,
   ) {
-    final daysOverdue = DateTime.now().difference(reservation.requestDate!).inDays;
+    final daysOverdue = DateTime.now()
+        .difference(reservation.requestDate!)
+        .inDays;
     final overdueColor = NotificationService.getOverdueColor(daysOverdue);
 
     return Card(
@@ -432,9 +439,9 @@ class _OverdueReservationsScreenState extends State<OverdueReservationsScreen> {
                 ),
               ],
             ),
-            
+
             SizedBox(height: 12),
-            
+
             // معلومات الحجز
             Row(
               children: [
@@ -446,9 +453,9 @@ class _OverdueReservationsScreenState extends State<OverdueReservationsScreen> {
                 ),
               ],
             ),
-            
+
             SizedBox(height: 8),
-            
+
             Row(
               children: [
                 Icon(Icons.business, size: 16, color: Colors.grey[600]),
@@ -459,9 +466,9 @@ class _OverdueReservationsScreenState extends State<OverdueReservationsScreen> {
                 ),
               ],
             ),
-            
+
             SizedBox(height: 8),
-            
+
             Row(
               children: [
                 Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
@@ -472,7 +479,7 @@ class _OverdueReservationsScreenState extends State<OverdueReservationsScreen> {
                 ),
               ],
             ),
-            
+
             if (reservation.requestDescription?.isNotEmpty == true) ...[
               SizedBox(height: 8),
               Row(
@@ -488,9 +495,9 @@ class _OverdueReservationsScreenState extends State<OverdueReservationsScreen> {
                 ],
               ),
             ],
-            
+
             SizedBox(height: 16),
-            
+
             // أزرار الإجراءات
             Row(
               children: [

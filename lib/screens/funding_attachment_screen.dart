@@ -9,13 +9,11 @@ import '../services/funding_attachment_examples.dart';
 class FundingAttachmentScreen extends StatefulWidget {
   final int? fundingId; // إذا تم تمرير معرف تمويل محدد
 
-  const FundingAttachmentScreen({
-    Key? key,
-    this.fundingId,
-  }) : super(key: key);
+  const FundingAttachmentScreen({Key? key, this.fundingId}) : super(key: key);
 
   @override
-  _FundingAttachmentScreenState createState() => _FundingAttachmentScreenState();
+  _FundingAttachmentScreenState createState() =>
+      _FundingAttachmentScreenState();
 }
 
 class _FundingAttachmentScreenState extends State<FundingAttachmentScreen> {
@@ -23,7 +21,7 @@ class _FundingAttachmentScreenState extends State<FundingAttachmentScreen> {
   List<InstitutionFunding> _fundings = [];
   InstitutionFunding? _selectedFunding;
   bool _isLoading = false;
-  
+
   // للبحث
   final _searchController = TextEditingController();
   List<FundingAttachment> _filteredAttachments = [];
@@ -41,12 +39,12 @@ class _FundingAttachmentScreenState extends State<FundingAttachmentScreen> {
 
     try {
       await DatabaseService.initialize();
-      
+
       // تحميل قائمة التمويلات
       final fundings = await DatabaseService.getAllInstitutionFunding();
       setState(() {
         _fundings = fundings;
-        
+
         // تحديد التمويل المحدد إذا تم تمريره
         if (widget.fundingId != null && fundings.isNotEmpty) {
           try {
@@ -62,7 +60,6 @@ class _FundingAttachmentScreenState extends State<FundingAttachmentScreen> {
       });
 
       await _loadAttachments();
-
     } catch (e) {
       _showErrorSnackBar('خطأ في تحميل البيانات: $e');
     } finally {
@@ -76,7 +73,9 @@ class _FundingAttachmentScreenState extends State<FundingAttachmentScreen> {
     if (_selectedFunding == null) return;
 
     try {
-      final attachments = await FundingAttachmentService.getAttachments(_selectedFunding!.id);
+      final attachments = await FundingAttachmentService.getAttachments(
+        _selectedFunding!.id,
+      );
       setState(() {
         _attachments = attachments;
         _applySearch();
@@ -93,8 +92,8 @@ class _FundingAttachmentScreenState extends State<FundingAttachmentScreen> {
     } else {
       _filteredAttachments = _attachments.where((attachment) {
         return attachment.fileName?.toLowerCase().contains(query) == true ||
-               attachment.fileType?.toLowerCase().contains(query) == true ||
-               attachment.description?.toLowerCase().contains(query) == true;
+            attachment.fileType?.toLowerCase().contains(query) == true ||
+            attachment.description?.toLowerCase().contains(query) == true;
       }).toList();
     }
   }
@@ -107,10 +106,10 @@ class _FundingAttachmentScreenState extends State<FundingAttachmentScreen> {
 
     try {
       final result = await FilePicker.platform.pickFiles();
-      
+
       if (result != null && result.files.single.path != null) {
         final file = result.files.single;
-        
+
         await _showUploadDialog(file.path!, file.name);
       }
     } catch (e) {
@@ -150,7 +149,11 @@ class _FundingAttachmentScreenState extends State<FundingAttachmentScreen> {
             ElevatedButton(
               onPressed: () async {
                 Navigator.of(context).pop();
-                await _uploadFile(filePath, fileName, descriptionController.text);
+                await _uploadFile(
+                  filePath,
+                  fileName,
+                  descriptionController.text,
+                );
               },
               child: Text('رفع'),
             ),
@@ -160,7 +163,11 @@ class _FundingAttachmentScreenState extends State<FundingAttachmentScreen> {
     );
   }
 
-  Future<void> _uploadFile(String filePath, String fileName, String description) async {
+  Future<void> _uploadFile(
+    String filePath,
+    String fileName,
+    String description,
+  ) async {
     setState(() {
       _isLoading = true;
     });
@@ -175,7 +182,6 @@ class _FundingAttachmentScreenState extends State<FundingAttachmentScreen> {
 
       await _loadAttachments();
       _showSuccessSnackBar('تم رفع المرفق بنجاح');
-
     } catch (e) {
       _showErrorSnackBar('خطأ في رفع المرفق: $e');
     } finally {
@@ -211,7 +217,9 @@ class _FundingAttachmentScreenState extends State<FundingAttachmentScreen> {
   }
 
   Future<void> _editAttachmentDescription(FundingAttachment attachment) async {
-    final controller = TextEditingController(text: attachment.description ?? '');
+    final controller = TextEditingController(
+      text: attachment.description ?? '',
+    );
 
     return showDialog<void>(
       context: context,
@@ -252,7 +260,10 @@ class _FundingAttachmentScreenState extends State<FundingAttachmentScreen> {
     );
   }
 
-  Future<void> _updateDescription(FundingAttachment attachment, String newDescription) async {
+  Future<void> _updateDescription(
+    FundingAttachment attachment,
+    String newDescription,
+  ) async {
     try {
       await FundingAttachmentService.updateAttachmentDescription(
         attachment.id,
@@ -261,7 +272,6 @@ class _FundingAttachmentScreenState extends State<FundingAttachmentScreen> {
 
       await _loadAttachments();
       _showSuccessSnackBar('تم تحديث الوصف بنجاح');
-
     } catch (e) {
       _showErrorSnackBar('خطأ في تحديث الوصف: $e');
     }
@@ -375,10 +385,10 @@ class _FundingAttachmentScreenState extends State<FundingAttachmentScreen> {
         children: [
           // منطقة التحكم
           _buildControlSection(),
-          
+
           // منطقة البحث
           _buildSearchSection(),
-          
+
           // قائمة المرفقات
           Expanded(
             child: _isLoading
@@ -425,7 +435,9 @@ class _FundingAttachmentScreenState extends State<FundingAttachmentScreen> {
             items: _fundings.map((funding) {
               return DropdownMenuItem<InstitutionFunding>(
                 value: funding,
-                child: Text('تمويل #${funding.id} - ${funding.allocatedAmount.toStringAsFixed(0)}'),
+                child: Text(
+                  'تمويل #${funding.id} - ${funding.allocatedAmount.toStringAsFixed(0)}',
+                ),
               );
             }).toList(),
             onChanged: (value) {
@@ -476,18 +488,11 @@ class _FundingAttachmentScreenState extends State<FundingAttachmentScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.attach_file_outlined,
-              size: 80,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.attach_file_outlined, size: 80, color: Colors.grey[400]),
             SizedBox(height: 16),
             Text(
               'اختر تمويلاً لعرض مرفقاته',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 18, color: Colors.grey[600]),
             ),
           ],
         ),
@@ -499,27 +504,17 @@ class _FundingAttachmentScreenState extends State<FundingAttachmentScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.folder_open_outlined,
-              size: 80,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.folder_open_outlined, size: 80, color: Colors.grey[400]),
             SizedBox(height: 16),
             Text(
               _attachments.isEmpty ? 'لا توجد مرفقات' : 'لا توجد نتائج للبحث',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 18, color: Colors.grey[600]),
             ),
             if (_attachments.isEmpty) ...[
               SizedBox(height: 8),
               Text(
                 'اضغط على زر "إضافة مرفق" لبدء رفع الملفات',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[500],
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey[500]),
               ),
             ],
           ],
@@ -570,11 +565,9 @@ class _FundingAttachmentScreenState extends State<FundingAttachmentScreen> {
                     Icon(Icons.access_time, size: 16, color: Colors.grey[500]),
                     SizedBox(width: 4),
                     Text(
-                      attachment.uploadedAt?.toString().split('.')[0] ?? 'غير محدد',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[500],
-                      ),
+                      attachment.uploadedAt?.toString().split('.')[0] ??
+                          'غير محدد',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                     ),
                   ],
                 ),
@@ -659,7 +652,7 @@ class _FundingAttachmentScreenState extends State<FundingAttachmentScreen> {
   Future<void> _showStats() async {
     try {
       final stats = await DatabaseService.getAttachmentsStats();
-      
+
       showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -674,7 +667,9 @@ class _FundingAttachmentScreenState extends State<FundingAttachmentScreen> {
                 SizedBox(height: 16),
                 Text('التوزيع حسب النوع:'),
                 SizedBox(height: 8),
-                ...(stats['typeStats'] as Map<String, int>).entries.map((entry) {
+                ...(stats['typeStats'] as Map<String, int>).entries.map((
+                  entry,
+                ) {
                   return Padding(
                     padding: EdgeInsets.only(left: 16, bottom: 4),
                     child: Text('${entry.key}: ${entry.value}'),

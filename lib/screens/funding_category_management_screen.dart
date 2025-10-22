@@ -5,10 +5,12 @@ import '../services/database_service.dart';
 
 class FundingCategoryManagementScreen extends StatefulWidget {
   @override
-  _FundingCategoryManagementScreenState createState() => _FundingCategoryManagementScreenState();
+  _FundingCategoryManagementScreenState createState() =>
+      _FundingCategoryManagementScreenState();
 }
 
-class _FundingCategoryManagementScreenState extends State<FundingCategoryManagementScreen> {
+class _FundingCategoryManagementScreenState
+    extends State<FundingCategoryManagementScreen> {
   List<FundingCategory> categories = [];
   bool isLoading = true;
 
@@ -68,11 +70,23 @@ class _FundingCategoryManagementScreenState extends State<FundingCategoryManagem
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.folder_off, size: 80, color: Colors.grey),
+                              Icon(
+                                Icons.folder_off,
+                                size: 80,
+                                color: Colors.grey,
+                              ),
                               SizedBox(height: 16),
-                              Text('لا توجد أبواب مالية', style: TextStyle(fontSize: 18, color: Colors.grey)),
+                              Text(
+                                'لا توجد أبواب مالية',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.grey,
+                                ),
+                              ),
                               SizedBox(height: 8),
-                              Text('اضغط على "إضافة باب جديد" لإنشاء أول باب مالي'),
+                              Text(
+                                'اضغط على "إضافة باب جديد" لإنشاء أول باب مالي',
+                              ),
                             ],
                           ),
                         )
@@ -92,8 +106,10 @@ class _FundingCategoryManagementScreenState extends State<FundingCategoryManagem
 
   Widget _buildCategoryCard(FundingCategory category) {
     final isRootCategory = category.parentId == null;
-    final children = categories.where((c) => c.parentId == category.id).toList();
-    
+    final children = categories
+        .where((c) => c.parentId == category.id)
+        .toList();
+
     return Card(
       margin: EdgeInsets.only(bottom: 8),
       child: ExpansionTile(
@@ -108,8 +124,11 @@ class _FundingCategoryManagementScreenState extends State<FundingCategoryManagem
             fontSize: isRootCategory ? 16 : 14,
           ),
         ),
-        subtitle: category.description != null 
-            ? Text(category.description!, style: TextStyle(color: Colors.grey[600]))
+        subtitle: category.description != null
+            ? Text(
+                category.description!,
+                style: TextStyle(color: Colors.grey[600]),
+              )
             : null,
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -133,13 +152,33 @@ class _FundingCategoryManagementScreenState extends State<FundingCategoryManagem
                 }
               },
               itemBuilder: (context) => [
-                PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit), SizedBox(width: 8), Text('تعديل')])),
-                PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete), SizedBox(width: 8), Text('حذف')])),
+                PopupMenuItem(
+                  value: 'edit',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit),
+                      SizedBox(width: 8),
+                      Text('تعديل'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete),
+                      SizedBox(width: 8),
+                      Text('حذف'),
+                    ],
+                  ),
+                ),
               ],
             ),
           ],
         ),
-        children: children.map((child) => _buildSubCategoryTile(child)).toList(),
+        children: children
+            .map((child) => _buildSubCategoryTile(child))
+            .toList(),
       ),
     );
   }
@@ -148,8 +187,11 @@ class _FundingCategoryManagementScreenState extends State<FundingCategoryManagem
     return ListTile(
       leading: Icon(Icons.label, color: Colors.orange, size: 20),
       title: Text(category.name),
-      subtitle: category.description != null 
-          ? Text(category.description!, style: TextStyle(color: Colors.grey[600]))
+      subtitle: category.description != null
+          ? Text(
+              category.description!,
+              style: TextStyle(color: Colors.grey[600]),
+            )
           : null,
       trailing: PopupMenuButton<String>(
         onSelected: (value) {
@@ -163,8 +205,18 @@ class _FundingCategoryManagementScreenState extends State<FundingCategoryManagem
           }
         },
         itemBuilder: (context) => [
-          PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit), SizedBox(width: 8), Text('تعديل')])),
-          PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete), SizedBox(width: 8), Text('حذف')])),
+          PopupMenuItem(
+            value: 'edit',
+            child: Row(
+              children: [Icon(Icons.edit), SizedBox(width: 8), Text('تعديل')],
+            ),
+          ),
+          PopupMenuItem(
+            value: 'delete',
+            child: Row(
+              children: [Icon(Icons.delete), SizedBox(width: 8), Text('حذف')],
+            ),
+          ),
         ],
       ),
     );
@@ -173,7 +225,9 @@ class _FundingCategoryManagementScreenState extends State<FundingCategoryManagem
   Future<void> _showCategoryDialog({FundingCategory? category}) async {
     final isEditing = category != null;
     final nameController = TextEditingController(text: category?.name ?? '');
-    final descriptionController = TextEditingController(text: category?.description ?? '');
+    final descriptionController = TextEditingController(
+      text: category?.description ?? '',
+    );
     FundingCategory? selectedParent;
 
     // للتعديل، البحث عن الباب الأب
@@ -224,10 +278,12 @@ class _FundingCategoryManagementScreenState extends State<FundingCategoryManagem
                     ),
                     ...categories
                         .where((c) => isEditing ? c.id != category.id : true)
-                        .map((c) => DropdownMenuItem<FundingCategory?>(
-                              value: c,
-                              child: Text(c.name),
-                            )),
+                        .map(
+                          (c) => DropdownMenuItem<FundingCategory?>(
+                            value: c,
+                            child: Text(c.name),
+                          ),
+                        ),
                   ],
                   onChanged: (value) {
                     setDialogState(() {
@@ -257,29 +313,33 @@ class _FundingCategoryManagementScreenState extends State<FundingCategoryManagem
                     // تعديل الباب الموجود
                     final updatedCategory = category.copyWith(
                       name: nameController.text.trim(),
-                      description: descriptionController.text.trim().isEmpty 
-                          ? null 
+                      description: descriptionController.text.trim().isEmpty
+                          ? null
                           : descriptionController.text.trim(),
                       parentId: selectedParent?.id,
                       updatedAt: DateTime.now(),
                     );
 
                     await DatabaseService.isar.writeTxn(() async {
-                      await DatabaseService.isar.fundingCategorys.put(updatedCategory);
+                      await DatabaseService.isar.fundingCategorys.put(
+                        updatedCategory,
+                      );
                     });
                   } else {
                     // إضافة باب جديد
                     final newCategory = FundingCategory()
                       ..name = nameController.text.trim()
-                      ..description = descriptionController.text.trim().isEmpty 
-                          ? null 
+                      ..description = descriptionController.text.trim().isEmpty
+                          ? null
                           : descriptionController.text.trim()
                       ..parentId = selectedParent?.id
                       ..createdAt = DateTime.now()
                       ..updatedAt = DateTime.now();
 
                     await DatabaseService.isar.writeTxn(() async {
-                      await DatabaseService.isar.fundingCategorys.put(newCategory);
+                      await DatabaseService.isar.fundingCategorys.put(
+                        newCategory,
+                      );
                     });
                   }
 
@@ -287,12 +347,22 @@ class _FundingCategoryManagementScreenState extends State<FundingCategoryManagem
                   await _loadCategories();
 
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(isEditing ? 'تم تعديل الباب بنجاح' : 'تم إضافة الباب بنجاح')),
+                    SnackBar(
+                      content: Text(
+                        isEditing
+                            ? 'تم تعديل الباب بنجاح'
+                            : 'تم إضافة الباب بنجاح',
+                      ),
+                    ),
                   );
                 } catch (e) {
                   print('خطأ في ${isEditing ? 'تعديل' : 'إضافة'} الباب: $e');
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('خطأ في ${isEditing ? 'تعديل' : 'إضافة'} الباب')),
+                    SnackBar(
+                      content: Text(
+                        'خطأ في ${isEditing ? 'تعديل' : 'إضافة'} الباب',
+                      ),
+                    ),
                   );
                 }
               },
@@ -317,7 +387,9 @@ class _FundingCategoryManagementScreenState extends State<FundingCategoryManagem
           context: context,
           builder: (context) => AlertDialog(
             title: Text('تحذير'),
-            content: Text('لا يمكن حذف هذا الباب لأنه مرتبط بتمويل موجود.\nيجب حذف جميع التمويلات المرتبطة أولاً.'),
+            content: Text(
+              'لا يمكن حذف هذا الباب لأنه مرتبط بتمويل موجود.\nيجب حذف جميع التمويلات المرتبطة أولاً.',
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -330,13 +402,17 @@ class _FundingCategoryManagementScreenState extends State<FundingCategoryManagem
       }
 
       // التحقق من وجود أبواب فرعية
-      final children = categories.where((c) => c.parentId == category.id).toList();
+      final children = categories
+          .where((c) => c.parentId == category.id)
+          .toList();
       if (children.isNotEmpty) {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
             title: Text('تحذير'),
-            content: Text('لا يمكن حذف هذا الباب لأنه يحتوي على أبواب فرعية.\nيجب حذف الأبواب الفرعية أولاً.'),
+            content: Text(
+              'لا يمكن حذف هذا الباب لأنه يحتوي على أبواب فرعية.\nيجب حذف الأبواب الفرعية أولاً.',
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -374,15 +450,15 @@ class _FundingCategoryManagementScreenState extends State<FundingCategoryManagem
         });
 
         await _loadCategories();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('تم حذف الباب بنجاح')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('تم حذف الباب بنجاح')));
       }
     } catch (e) {
       print('خطأ في حذف الباب: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ في حذف الباب')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('خطأ في حذف الباب')));
     }
   }
 }

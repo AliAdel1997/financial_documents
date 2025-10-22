@@ -15,7 +15,7 @@ class OrganizationProvider with ChangeNotifier {
   Future<void> loadOrganization() async {
     _isLoading = true;
     _error = null;
-    
+
     try {
       _organization = await DatabaseService.getMainOrganization();
     } catch (e) {

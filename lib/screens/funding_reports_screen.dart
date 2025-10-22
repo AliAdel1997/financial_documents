@@ -15,12 +15,12 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
   List<FundingCategory> categories = [];
   List<Institution> institutions = [];
   List<InstitutionFunding> fundings = [];
-  
+
   // فلاتر التقرير
   int _selectedYear = DateTime.now().year;
   int? _selectedMonth;
   bool _isLoading = false;
-  
+
   // بيانات التقرير
   Map<String, FundingReportData> reportData = {};
   FundingReportSummary? summary;
@@ -41,15 +41,14 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
       categories = await DatabaseService.getAllFundingCategories();
       institutions = await DatabaseService.getAllInstitutions();
       fundings = await DatabaseService.getAllInstitutionFunding();
-      
+
       // تحميل البيانات حسب السنة
       await _loadArchiveData();
-      
     } catch (e) {
       print('خطأ في تحميل البيانات: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ في تحميل البيانات')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('خطأ في تحميل البيانات')));
     } finally {
       setState(() {
         _isLoading = false;
@@ -59,39 +58,77 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
 
   Future<void> _loadArchiveData() async {
     try {
-      // تحديد نطاق التواريخ
-      DateTime startDate = DateTime(_selectedYear, _selectedMonth ?? 1, 1);
-      DateTime endDate = _selectedMonth != null 
-          ? DateTime(_selectedYear, _selectedMonth! + 1, 0)
-          : DateTime(_selectedYear + 1, 1, 0);
+      // تحميل جميع التخصيصات للسنة المختارة
+      List<InstitutionFunding> yearFundings =
+          await DatabaseService.getInstitutionFundingByYear(_selectedYear);
 
-      // تحميل الأرشيف باستخدام الطريقة المتاحة
-      List<FundingArchive> allArchives = await DatabaseService.getAllFundingArchives();
-      
-      // فلترة البيانات حسب التاريخ
-      archives = allArchives.where((archive) {
-        if (archive.executedAt == null) return false;
-        return archive.executedAt!.isAfter(startDate) && 
-               archive.executedAt!.isBefore(endDate);
+      // فلترة حسب الشهر إذا تم اختياره
+      if (_selectedMonth != null) {
+        yearFundings = yearFundings
+            .where((f) => f.month == _selectedMonth)
+            .toList();
+      }
+
+      // تحميل جميع المعاملات
+      List<FundingTransaction> allTransactions =
+          await DatabaseService.getAllFundingTransactions();
+
+      // فلترة المعاملات حسب السنة والشهر
+      List<FundingTransaction> filteredTransactions = allTransactions.where((
+        transaction,
+      ) {
+        bool matchesYear = transaction.year == _selectedYear;
+        bool matchesMonth =
+            _selectedMonth == null || transaction.month == _selectedMonth;
+        return matchesYear && matchesMonth;
+      }).toList();
+
+      // استخدام البيانات المفلترة
+      fundings = yearFundings;
+
+      // تحويل المعاملات إلى أرشيف للتوافق مع الكود الحالي
+      archives = filteredTransactions.map((transaction) {
+        return FundingArchive()
+          ..categoryId = transaction.categoryId
+          ..institutionId = transaction.institutionId
+          ..operationType = _getOperationTypeFromStatus(transaction.status)
+          ..amount = transaction.executedAmount ?? transaction.requestedAmount
+          ..executedAt = transaction.executionDate ?? transaction.requestDate
+          ..year = transaction.year
+          ..month = transaction.month;
       }).toList();
 
       // تحليل البيانات
       await _analyzeData();
-      
     } catch (e) {
       print('خطأ في تحميل بيانات الأرشيف: $e');
     }
   }
 
+  String _getOperationTypeFromStatus(ReservationStatus status) {
+    switch (status) {
+      case ReservationStatus.reserved:
+      case ReservationStatus.approved:
+        return 'حجز';
+      case ReservationStatus.spent:
+        return 'صرف';
+      default:
+        return 'حجز';
+    }
+  }
+
   Future<void> _analyzeData() async {
     reportData.clear();
-    
+
     double totalReserved = 0;
     double totalSpent = 0;
     double totalAllocated = 0;
 
     // تحليل البيانات لكل باب
     for (FundingCategory category in categories) {
+      // تخطي الفئات الفرعية واعرض فقط الرئيسية في التقرير الرئيسي
+      if (category.parentId != null) continue;
+
       FundingReportData data = FundingReportData(
         categoryId: category.id,
         categoryName: category.name,
@@ -102,32 +139,69 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
         transactions: [],
       );
 
-      // حساب التمويل المخصص للباب
-      double allocated = fundings
+      // حساب التمويل المخصص للباب (شامل الفئات الفرعية)
+      double allocated = 0;
+
+      // التخصيصات المباشرة للباب الرئيسي
+      allocated += fundings
           .where((f) => f.categoryId == category.id)
           .fold(0.0, (sum, f) => sum + f.allocatedAmount);
+
+      // التخصيصات للفئات الفرعية
+      List<FundingCategory> subCategories = categories
+          .where((c) => c.parentId == category.id)
+          .toList();
+
+      for (FundingCategory subCat in subCategories) {
+        allocated += fundings
+            .where((f) => f.categoryId == subCat.id)
+            .fold(0.0, (sum, f) => sum + f.allocatedAmount);
+      }
+
       data.allocated = allocated;
       totalAllocated += allocated;
 
-      // تحليل المعاملات
+      // حساب المحجوز والمصروف الفعلي من InstitutionFunding
+      double reserved = 0;
+      double spent = 0;
+
+      // للباب الرئيسي
+      reserved += fundings
+          .where((f) => f.categoryId == category.id)
+          .fold(0.0, (sum, f) => sum + f.reservedAmount);
+
+      spent += fundings
+          .where((f) => f.categoryId == category.id)
+          .fold(0.0, (sum, f) => sum + f.spentAmount);
+
+      // للفئات الفرعية
+      for (FundingCategory subCat in subCategories) {
+        reserved += fundings
+            .where((f) => f.categoryId == subCat.id)
+            .fold(0.0, (sum, f) => sum + f.reservedAmount);
+
+        spent += fundings
+            .where((f) => f.categoryId == subCat.id)
+            .fold(0.0, (sum, f) => sum + f.spentAmount);
+      }
+
+      data.reserved = reserved;
+      data.spent = spent;
+      totalReserved += reserved;
+      totalSpent += spent;
+
+      // تحليل المعاملات (للباب الرئيسي والفرعية)
+      List<int> categoryIds = [category.id, ...subCategories.map((c) => c.id)];
       List<FundingArchive> categoryArchives = archives
-          .where((a) => a.categoryId == category.id)
+          .where((a) => categoryIds.contains(a.categoryId))
           .toList();
 
-      for (FundingArchive archive in categoryArchives) {
-        if (archive.operationType == 'حجز') {
-          data.reserved += archive.amount;
-          totalReserved += archive.amount;
-        } else if (archive.operationType == 'صرف') {
-          data.spent += archive.amount;
-          totalSpent += archive.amount;
-        }
-        data.transactions.add(archive);
-      }
+      data.transactions.addAll(categoryArchives);
 
       // حساب المتبقي
       data.remaining = data.allocated - data.spent - data.reserved;
 
+      // إضافة البيانات إذا كان هناك نشاط
       if (data.allocated > 0 || data.reserved > 0 || data.spent > 0) {
         reportData[category.name] = data;
       }
@@ -139,7 +213,7 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
       totalReserved: totalReserved,
       totalSpent: totalSpent,
       totalRemaining: totalAllocated - totalSpent - totalReserved,
-      period: _selectedMonth != null 
+      period: _selectedMonth != null
           ? '${_getMonthName(_selectedMonth!)} $_selectedYear'
           : 'السنة $_selectedYear',
       categoriesCount: reportData.length,
@@ -147,12 +221,31 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
     );
 
     setState(() {});
+
+    // طباعة تفاصيل للتصحيح
+    print('\n=== تحليل البيانات للتقرير ===');
+    print('إجمالي المخصص: ${totalAllocated.toStringAsFixed(0)}');
+    print('إجمالي المحجوز: ${totalReserved.toStringAsFixed(0)}');
+    print('إجمالي المصروف: ${totalSpent.toStringAsFixed(0)}');
+    print('عدد الأبواب النشطة: ${reportData.length}');
+    print('عدد المعاملات: ${archives.length}');
+    print('=================================\n');
   }
 
   String _getMonthName(int month) {
     const monthNames = [
-      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+      'يناير',
+      'فبراير',
+      'مارس',
+      'أبريل',
+      'مايو',
+      'يونيو',
+      'يوليو',
+      'أغسطس',
+      'سبتمبر',
+      'أكتوبر',
+      'نوفمبر',
+      'ديسمبر',
     ];
     return monthNames[month - 1];
   }
@@ -160,9 +253,9 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
   Future<void> _exportToJSON() async {
     try {
       if (summary == null || reportData.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('لا توجد بيانات للتصدير')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('لا توجد بيانات للتصدير')));
         return;
       }
 
@@ -188,20 +281,19 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
       fileName += '.json';
 
       await _saveFile(jsonEncode(exportData), fileName, 'application/json');
-
     } catch (e) {
       print('خطأ في تصدير JSON: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ في تصدير التقرير')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('خطأ في تصدير التقرير')));
     }
   }
 
   Future<Map<String, dynamic>> _getAttachmentsInfo() async {
     Map<String, dynamic> attachments = {};
-    
+
     for (FundingArchive archive in archives) {
-      if (archive.executionAttachmentPath != null && 
+      if (archive.executionAttachmentPath != null &&
           archive.executionAttachmentPath!.isNotEmpty) {
         String fileName = archive.executionAttachmentPath!.split('\\').last;
         attachments[archive.id.toString()] = {
@@ -213,16 +305,16 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
         };
       }
     }
-    
+
     return attachments;
   }
 
   Future<void> _exportToPDF() async {
     try {
       if (summary == null || reportData.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('لا توجد بيانات للتصدير')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('لا توجد بيانات للتصدير')));
         return;
       }
 
@@ -239,18 +331,21 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
 
       // إنشاء محتوى PDF كنص بسيط لحين تطوير الخدمة
       String pdfContent = _generateReportText();
-      
-      await _saveFile(pdfContent, fileName.replaceAll('.pdf', '.txt'), 'text/plain');
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تم إنشاء تقرير نصي: $fileName')),
+      await _saveFile(
+        pdfContent,
+        fileName.replaceAll('.pdf', '.txt'),
+        'text/plain',
       );
 
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('تم إنشاء تقرير نصي: $fileName')));
     } catch (e) {
       print('خطأ في تصدير PDF: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ في إنشاء تقرير PDF')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('خطأ في إنشاء تقرير PDF')));
     } finally {
       setState(() {
         _isLoading = false;
@@ -260,21 +355,29 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
 
   String _generateReportText() {
     StringBuffer buffer = StringBuffer();
-    
+
     buffer.writeln('=== تقرير التمويل الشامل ===');
     buffer.writeln('الفترة: ${summary!.period}');
     buffer.writeln('تاريخ الإنشاء: ${DateTime.now()}');
     buffer.writeln('');
-    
+
     buffer.writeln('=== ملخص عام ===');
-    buffer.writeln('إجمالي التمويل: ${summary!.totalAllocated.toStringAsFixed(0)} د.ع');
-    buffer.writeln('إجمالي المحجوز: ${summary!.totalReserved.toStringAsFixed(0)} د.ع');
-    buffer.writeln('إجمالي المصروف: ${summary!.totalSpent.toStringAsFixed(0)} د.ع');
-    buffer.writeln('إجمالي المتبقي: ${summary!.totalRemaining.toStringAsFixed(0)} د.ع');
+    buffer.writeln(
+      'إجمالي التمويل: ${summary!.totalAllocated.toStringAsFixed(0)} د.ع',
+    );
+    buffer.writeln(
+      'إجمالي المحجوز: ${summary!.totalReserved.toStringAsFixed(0)} د.ع',
+    );
+    buffer.writeln(
+      'إجمالي المصروف: ${summary!.totalSpent.toStringAsFixed(0)} د.ع',
+    );
+    buffer.writeln(
+      'إجمالي المتبقي: ${summary!.totalRemaining.toStringAsFixed(0)} د.ع',
+    );
     buffer.writeln('عدد الأبواب النشطة: ${summary!.categoriesCount}');
     buffer.writeln('عدد العمليات: ${summary!.transactionsCount}');
     buffer.writeln('');
-    
+
     buffer.writeln('=== تفاصيل الأبواب ===');
     for (var data in reportData.values) {
       buffer.writeln('--- ${data.categoryName} ---');
@@ -285,16 +388,21 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
       buffer.writeln('  عدد العمليات: ${data.transactions.length}');
       buffer.writeln('');
     }
-    
+
     return buffer.toString();
   }
 
-  Future<void> _saveFile(String content, String fileName, String mimeType) async {
+  Future<void> _saveFile(
+    String content,
+    String fileName,
+    String mimeType,
+  ) async {
     try {
       // احصل على مجلد التنزيلات
-      String downloadsPath = 'C:\\Users\\${Platform.environment['USERNAME']}\\Downloads';
+      String downloadsPath =
+          'C:\\Users\\${Platform.environment['USERNAME']}\\Downloads';
       String filePath = '$downloadsPath\\$fileName';
-      
+
       // احفظ الملف
       File file = File(filePath);
       await file.writeAsString(content);
@@ -317,6 +425,17 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
   Widget _buildSummaryCard() {
     if (summary == null) return Container();
 
+    // حساب النسب المئوية
+    double reservedPercentage = summary!.totalAllocated > 0
+        ? (summary!.totalReserved / summary!.totalAllocated) * 100
+        : 0;
+    double spentPercentage = summary!.totalAllocated > 0
+        ? (summary!.totalSpent / summary!.totalAllocated) * 100
+        : 0;
+    double remainingPercentage = summary!.totalAllocated > 0
+        ? (summary!.totalRemaining / summary!.totalAllocated) * 100
+        : 0;
+
     return Card(
       margin: EdgeInsets.all(16),
       elevation: 4,
@@ -337,22 +456,24 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
               ],
             ),
             SizedBox(height: 20),
-            
+
             // صف الإحصائيات الرئيسية
             Row(
               children: [
                 Expanded(
-                  child: _buildSummaryItem(
+                  child: _buildSummaryItemWithPercentage(
                     'إجمالي التمويل',
                     summary!.totalAllocated,
+                    100.0,
                     Colors.blue,
                     Icons.account_balance_wallet,
                   ),
                 ),
                 Expanded(
-                  child: _buildSummaryItem(
+                  child: _buildSummaryItemWithPercentage(
                     'المحجوز',
                     summary!.totalReserved,
+                    reservedPercentage,
                     Colors.orange,
                     Icons.lock,
                   ),
@@ -360,21 +481,23 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
               ],
             ),
             SizedBox(height: 16),
-            
+
             Row(
               children: [
                 Expanded(
-                  child: _buildSummaryItem(
+                  child: _buildSummaryItemWithPercentage(
                     'المصروف',
                     summary!.totalSpent,
+                    spentPercentage,
                     Colors.red,
                     Icons.payments,
                   ),
                 ),
                 Expanded(
-                  child: _buildSummaryItem(
+                  child: _buildSummaryItemWithPercentage(
                     'المتبقي',
                     summary!.totalRemaining,
+                    remainingPercentage,
                     summary!.totalRemaining >= 0 ? Colors.green : Colors.red,
                     Icons.savings,
                   ),
@@ -382,23 +505,83 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
               ],
             ),
             SizedBox(height: 16),
-            
+
+            // شريط التقدم المرئي
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'توزيع التمويل',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 8),
+                  LinearProgressIndicator(
+                    value: summary!.totalAllocated > 0
+                        ? (summary!.totalSpent + summary!.totalReserved) /
+                              summary!.totalAllocated
+                        : 0,
+                    backgroundColor: Colors.grey[300],
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                  ),
+                  SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'مستخدم: ${(spentPercentage + reservedPercentage).toStringAsFixed(1)}%',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                      Text(
+                        'متبقي: ${remainingPercentage.toStringAsFixed(1)}%',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 16),
+
             // معلومات إضافية
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 Column(
                   children: [
-                    Text('${summary!.categoriesCount}', 
-                         style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.purple)),
-                    Text('أبواب نشطة', style: TextStyle(color: Colors.grey[600])),
+                    Text(
+                      '${summary!.categoriesCount}',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.purple,
+                      ),
+                    ),
+                    Text(
+                      'أبواب نشطة',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
                   ],
                 ),
                 Column(
                   children: [
-                    Text('${summary!.transactionsCount}', 
-                         style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.indigo)),
-                    Text('إجمالي العمليات', style: TextStyle(color: Colors.grey[600])),
+                    Text(
+                      '${summary!.transactionsCount}',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.indigo,
+                      ),
+                    ),
+                    Text(
+                      'إجمالي العمليات',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
                   ],
                 ),
               ],
@@ -409,7 +592,13 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
     );
   }
 
-  Widget _buildSummaryItem(String title, double amount, Color color, IconData icon) {
+  Widget _buildSummaryItemWithPercentage(
+    String title,
+    double amount,
+    double percentage,
+    Color color,
+    IconData icon,
+  ) {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 8),
       padding: EdgeInsets.all(16),
@@ -431,12 +620,26 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
             ),
           ),
           SizedBox(height: 4),
+          if (percentage != 100.0) // لا نظهر النسبة للإجمالي
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '${percentage.toStringAsFixed(1)}%',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+            ),
+          SizedBox(height: 4),
           Text(
             title,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             textAlign: TextAlign.center,
           ),
         ],
@@ -451,12 +654,7 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
         title: Text('تقارير التمويل الموسعة'),
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.refresh),
-            onPressed: _loadData,
-          ),
-        ],
+        actions: [IconButton(icon: Icon(Icons.refresh), onPressed: _loadData)],
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
@@ -467,7 +665,9 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
                   padding: EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.grey[50],
-                    border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+                    border: Border(
+                      bottom: BorderSide(color: Colors.grey[200]!),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -478,7 +678,10 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
                           decoration: InputDecoration(
                             labelText: 'السنة',
                             border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
                           ),
                           items: List.generate(5, (index) {
                             final year = DateTime.now().year - 2 + index;
@@ -495,9 +698,9 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
                           },
                         ),
                       ),
-                      
+
                       SizedBox(width: 16),
-                      
+
                       // فلتر الشهر
                       Expanded(
                         child: DropdownButtonFormField<int?>(
@@ -505,7 +708,10 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
                           decoration: InputDecoration(
                             labelText: 'الشهر',
                             border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
                           ),
                           items: [
                             DropdownMenuItem<int?>(
@@ -527,9 +733,9 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
                           },
                         ),
                       ),
-                      
+
                       SizedBox(width: 16),
-                      
+
                       // أزرار التصدير
                       ElevatedButton.icon(
                         onPressed: _exportToJSON,
@@ -540,9 +746,9 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
                           foregroundColor: Colors.white,
                         ),
                       ),
-                      
+
                       SizedBox(width: 8),
-                      
+
                       ElevatedButton.icon(
                         onPressed: _exportToPDF,
                         icon: Icon(Icons.picture_as_pdf),
@@ -555,7 +761,7 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
                     ],
                   ),
                 ),
-                
+
                 // المحتوى
                 Expanded(
                   child: reportData.isEmpty
@@ -563,11 +769,18 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.assessment, size: 64, color: Colors.grey),
+                              Icon(
+                                Icons.assessment,
+                                size: 64,
+                                color: Colors.grey,
+                              ),
                               SizedBox(height: 16),
                               Text(
                                 'لا توجد بيانات للفترة المحددة',
-                                style: TextStyle(fontSize: 18, color: Colors.grey),
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.grey,
+                                ),
                               ),
                             ],
                           ),
@@ -576,7 +789,7 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
                           children: [
                             // ملخص عام
                             _buildSummaryCard(),
-                            
+
                             // تفاصيل الأبواب
                             Container(
                               margin: EdgeInsets.all(16),
@@ -588,8 +801,10 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
                                 ),
                               ),
                             ),
-                            
-                            ...reportData.values.map((data) => _buildCategoryCard(data)),
+
+                            ...reportData.values.map(
+                              (data) => _buildCategoryCard(data),
+                            ),
                           ],
                         ),
                 ),
@@ -599,8 +814,8 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
   }
 
   Widget _buildCategoryCard(FundingReportData data) {
-    double progressPercent = data.allocated > 0 
-        ? (data.spent + data.reserved) / data.allocated 
+    double progressPercent = data.allocated > 0
+        ? (data.spent + data.reserved) / data.allocated
         : 0.0;
 
     return Card(
@@ -620,22 +835,23 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
                 Expanded(
                   child: Text(
                     data.categoryName,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: progressPercent > 1.0 ? Colors.red[100] : Colors.green[100],
+                    color: progressPercent > 1.0
+                        ? Colors.red[100]
+                        : Colors.green[100],
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     '${(progressPercent * 100).toStringAsFixed(1)}%',
                     style: TextStyle(
-                      color: progressPercent > 1.0 ? Colors.red[700] : Colors.green[700],
+                      color: progressPercent > 1.0
+                          ? Colors.red[700]
+                          : Colors.green[700],
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                     ),
@@ -643,9 +859,9 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
                 ),
               ],
             ),
-            
+
             SizedBox(height: 16),
-            
+
             // الأرقام
             Row(
               children: [
@@ -653,13 +869,17 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
                   child: _buildDataItem('المخصص', data.allocated, Colors.blue),
                 ),
                 Expanded(
-                  child: _buildDataItem('المحجوز', data.reserved, Colors.orange),
+                  child: _buildDataItem(
+                    'المحجوز',
+                    data.reserved,
+                    Colors.orange,
+                  ),
                 ),
               ],
             ),
-            
+
             SizedBox(height: 12),
-            
+
             Row(
               children: [
                 Expanded(
@@ -667,16 +887,16 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
                 ),
                 Expanded(
                   child: _buildDataItem(
-                    'المتبقي', 
-                    data.remaining, 
+                    'المتبقي',
+                    data.remaining,
                     data.remaining >= 0 ? Colors.green : Colors.red,
                   ),
                 ),
               ],
             ),
-            
+
             SizedBox(height: 16),
-            
+
             // شريط التقدم
             LinearProgressIndicator(
               value: progressPercent > 1.0 ? 1.0 : progressPercent,
@@ -685,16 +905,13 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
                 progressPercent > 1.0 ? Colors.red : Colors.green,
               ),
             ),
-            
+
             SizedBox(height: 8),
-            
+
             // معلومات العمليات
             Text(
               'عدد العمليات: ${data.transactions.length}',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 12,
-              ),
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
             ),
           ],
         ),
@@ -722,13 +939,7 @@ class _FundingReportsScreenState extends State<FundingReportsScreen> {
             ),
           ),
           SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              color: Colors.grey[600],
-            ),
-          ),
+          Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
         ],
       ),
     );
@@ -764,15 +975,21 @@ class FundingReportData {
       'spent': spent,
       'remaining': remaining,
       'transactionsCount': transactions.length,
-      'transactions': transactions.map((t) => {
-        'id': t.id,
-        'operationType': t.operationType,
-        'amount': t.amount,
-        'operationDate': t.executedAt?.toIso8601String(),
-        'description': t.description,
-        'hasAttachment': t.executionAttachmentPath != null && t.executionAttachmentPath!.isNotEmpty,
-        'attachmentPath': t.executionAttachmentPath,
-      }).toList(),
+      'transactions': transactions
+          .map(
+            (t) => {
+              'id': t.id,
+              'operationType': t.operationType,
+              'amount': t.amount,
+              'operationDate': t.executedAt?.toIso8601String(),
+              'description': t.description,
+              'hasAttachment':
+                  t.executionAttachmentPath != null &&
+                  t.executionAttachmentPath!.isNotEmpty,
+              'attachmentPath': t.executionAttachmentPath,
+            },
+          )
+          .toList(),
     };
   }
 }
@@ -805,7 +1022,9 @@ class FundingReportSummary {
       'period': period,
       'categoriesCount': categoriesCount,
       'transactionsCount': transactionsCount,
-      'utilizationPercent': totalAllocated > 0 ? ((totalSpent + totalReserved) / totalAllocated * 100) : 0,
+      'utilizationPercent': totalAllocated > 0
+          ? ((totalSpent + totalReserved) / totalAllocated * 100)
+          : 0,
     };
   }
 }

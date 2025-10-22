@@ -563,7 +563,7 @@ class _AddDocumentScreenState extends State<AddDocumentScreen> {
             ),
           ],
         ),
-        
+
         // الصف الثاني - أزرار الطباعة (فقط للمستندات المحفوظة)
         if (_isEditing && widget.document != null) ...[
           const SizedBox(height: 12),
@@ -585,8 +585,9 @@ class _AddDocumentScreenState extends State<AddDocumentScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: _isLoading || widget.document!.outgoingNumber == null 
-                      ? null 
+                  onPressed:
+                      _isLoading || widget.document!.outgoingNumber == null
+                      ? null
                       : _printDocument,
                   icon: const Icon(Icons.print),
                   label: const Text('طباعة'),
@@ -606,13 +607,13 @@ class _AddDocumentScreenState extends State<AddDocumentScreen> {
 
   Future<void> _previewDocument() async {
     if (widget.document == null) return;
-    
+
     try {
       await PrintingService.previewDocument(widget.document!, context);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ في المعاينة: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('خطأ في المعاينة: $e')));
     }
   }
 
@@ -628,20 +629,23 @@ class _AddDocumentScreenState extends State<AddDocumentScreen> {
       );
 
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم طباعة المستند بنجاح')),
-        );
-        
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('تم طباعة المستند بنجاح')));
+
         // تحديث البيانات في الواجهة
         if (mounted) {
-          final provider = Provider.of<DocumentsProvider>(context, listen: false);
+          final provider = Provider.of<DocumentsProvider>(
+            context,
+            listen: false,
+          );
           await provider.loadDocuments();
         }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ في الطباعة: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('خطأ في الطباعة: $e')));
     }
   }
 }

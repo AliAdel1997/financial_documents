@@ -6,11 +6,10 @@ import '../services/funding_attachment_service.dart';
 
 /// أمثلة وحالات اختبار لخدمة المرفقات
 class FundingAttachmentExamples {
-
   /// تشغيل مثال شامل لإدارة المرفقات
   static Future<void> runCompleteExample() async {
     print('🚀 بدء تشغيل أمثلة المرفقات...');
-    
+
     try {
       // تأكد من تهيئة قاعدة البيانات
       await DatabaseService.initialize();
@@ -37,7 +36,6 @@ class FundingAttachmentExamples {
       await _deleteAttachmentExample();
 
       print('✅ تم تشغيل جميع أمثلة المرفقات بنجاح!');
-
     } catch (e) {
       print('❌ خطأ في تشغيل أمثلة المرفقات: $e');
       rethrow;
@@ -53,7 +51,7 @@ class FundingAttachmentExamples {
       ..name = 'التجهيزات الطبية'
       ..description = 'باب خاص بالتجهيزات والمعدات الطبية'
       ..createdAt = DateTime.now();
-    
+
     final savedCategoryId = await DatabaseService.addFundingCategory(category);
     print('تم إنشاء فئة التمويل: ${category.name} (ID: $savedCategoryId)');
 
@@ -63,7 +61,9 @@ class FundingAttachmentExamples {
       ..address = 'الرياض - المملكة العربية السعودية'
       ..code = 'KFH001';
 
-    final savedInstitutionId = await DatabaseService.addInstitution(institution);
+    final savedInstitutionId = await DatabaseService.addInstitution(
+      institution,
+    );
     print('تم إنشاء المؤسسة: ${institution.name} (ID: $savedInstitutionId)');
 
     // إنشاء تمويل للمؤسسة
@@ -133,9 +133,13 @@ class FundingAttachmentExamples {
         ..filePath = attachmentData['filePath'] as String
         ..fileType = attachmentData['fileType'] as String
         ..description = attachmentData['description'] as String
-        ..uploadedAt = DateTime.now().subtract(Duration(days: Random().nextInt(30)));
+        ..uploadedAt = DateTime.now().subtract(
+          Duration(days: Random().nextInt(30)),
+        );
 
-      final savedAttachment = await DatabaseService.addFundingAttachment(attachment);
+      final savedAttachment = await DatabaseService.addFundingAttachment(
+        attachment,
+      );
       print('تم إنشاء مرفق: ${savedAttachment.fileName}');
     }
   }
@@ -146,8 +150,10 @@ class FundingAttachmentExamples {
 
     final fundings = await DatabaseService.getAllInstitutionFunding();
     for (final funding in fundings) {
-      final attachments = await FundingAttachmentService.getAttachments(funding.id);
-      
+      final attachments = await FundingAttachmentService.getAttachments(
+        funding.id,
+      );
+
       if (attachments.isNotEmpty) {
         print('\n--- مرفقات التمويل رقم ${funding.id} ---');
         for (final attachment in attachments) {
@@ -184,10 +190,10 @@ class FundingAttachmentExamples {
     print('\n📊 إحصائيات المرفقات:');
 
     final stats = await DatabaseService.getAttachmentsStats();
-    
+
     print('إجمالي المرفقات: ${stats['totalAttachments']}');
     print('المرفقات الحديثة (آخر 30 يوم): ${stats['recentCount']}');
-    
+
     final typeStats = stats['typeStats'] as Map<String, int>;
     if (typeStats.isNotEmpty) {
       print('\nتوزيع المرفقات حسب النوع:');
@@ -202,17 +208,21 @@ class FundingAttachmentExamples {
     print('\n✏️ اختبار تحديث وصف مرفق:');
 
     // البحث عن أول مرفق
-    final searchResults = await FundingAttachmentService.searchAttachments('عقد');
+    final searchResults = await FundingAttachmentService.searchAttachments(
+      'عقد',
+    );
     if (searchResults.isNotEmpty) {
       final attachment = searchResults.first;
       print('الوصف القديم: ${attachment.description}');
 
       // تحديث الوصف
-      final newDescription = '${attachment.description} - تم التحديث في ${DateTime.now()}';
-      final updatedAttachment = await FundingAttachmentService.updateAttachmentDescription(
-        attachment.id,
-        newDescription,
-      );
+      final newDescription =
+          '${attachment.description} - تم التحديث في ${DateTime.now()}';
+      final updatedAttachment =
+          await FundingAttachmentService.updateAttachmentDescription(
+            attachment.id,
+            newDescription,
+          );
 
       if (updatedAttachment != null) {
         print('الوصف الجديد: ${updatedAttachment.description}');
@@ -228,7 +238,8 @@ class FundingAttachmentExamples {
     print('\n🗑️ اختبار حذف مرفق:');
 
     // البحث عن آخر مرفق
-    final recentAttachments = await FundingAttachmentService.getRecentAttachments(limit: 1);
+    final recentAttachments =
+        await FundingAttachmentService.getRecentAttachments(limit: 1);
     if (recentAttachments.isNotEmpty) {
       final attachment = recentAttachments.first;
       print('سيتم حذف المرفق: ${attachment.fileName}');
@@ -281,7 +292,6 @@ class FundingAttachmentExamples {
       print('   الاسم: ${attachment.fileName}');
       print('   النوع: ${attachment.fileType}');
       print('   المعرف: ${attachment.id}');
-
     } catch (e) {
       print('❌ خطأ في رفع الملف: $e');
     }
@@ -296,7 +306,9 @@ class FundingAttachmentExamples {
       int deletedAttachments = 0;
       final fundings = await DatabaseService.getAllInstitutionFunding();
       for (final funding in fundings) {
-        final count = await DatabaseService.deleteAttachmentsByFunding(funding.id);
+        final count = await DatabaseService.deleteAttachmentsByFunding(
+          funding.id,
+        );
         deletedAttachments += count;
       }
       print('تم حذف $deletedAttachments مرفق');
@@ -323,7 +335,6 @@ class FundingAttachmentExamples {
       print('تم حذف ${allCategories.length} فئة تمويل');
 
       print('✅ تم تنظيف جميع البيانات التجريبية');
-
     } catch (e) {
       print('❌ خطأ في تنظيف البيانات: $e');
     }
